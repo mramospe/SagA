@@ -22,8 +22,8 @@ build:
 test:
    stage: test
    script:
-      - ./build/test/test
-      - ./build/test/test_earth
+      - ./build/test/cpp/test
+      - ./build/test/cpp/test_earth
    dependencies:
       - build
 
