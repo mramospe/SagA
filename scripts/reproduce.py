@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--x-range', nargs=2, type=float, default=None, help='Range in X')
     parser.add_argument('--y-range', nargs=2, type=float, default=None, help='Range in Y')
     parser.add_argument('--z-range', nargs=2, type=float, default=None, help='Range in Z')
+    parser.add_argument('--show-tracks', action='store_true', help='Whether to show a faint line with the track followed by the particles')
     parser.add_argument('--save', action='store_true', help='Whether to save the output as a GIF')
 
     args = parser.parse_args()
@@ -47,7 +48,13 @@ if __name__ == '__main__':
     ax = p3.Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
-    def update(num, data, lines):
+    def update(num, data, lines, tracks):
+
+        if tracks is not None:
+            for d, l in zip(data, tracks):
+                l.set_data(d.values[:num, 0], d.values[:num, 1])
+                l.set_3d_properties(d.values[:num, 2])
+
         for d, l in zip(data, lines):
             l.set_data(d.values[num,:2])
             l.set_3d_properties(d.values[num, 2])
@@ -63,6 +70,12 @@ if __name__ == '__main__':
         marker_sizes = args.marker_sizes
     else:
         marker_sizes = len(particle_data) * [10]
+
+    if args.show_tracks:
+        logger.info('Tracks of the particles will be shown')
+        tracks = [ax.plot(d['x'][:1], d['y'][:1], d['z'][:1], linestyle='-', linewidth=0.1 * ms, color=c)[0] for d, c, ms in zip(particle_data, colors, marker_sizes)]
+    else:
+        tracks = None
 
     lines = [ax.plot(d['x'][0], d['y'][0], d['z'][0], marker='o', color=c, markersize=ms)[0] for d, c, ms in zip(particle_data, colors, marker_sizes)]
 
@@ -87,7 +100,7 @@ if __name__ == '__main__':
 
     logger.info('Start animation')
 
-    ani = animation.FuncAnimation(fig, update, len(raw_data), fargs=(particle_data, lines), interval=14, blit=False)
+    ani = animation.FuncAnimation(fig, update, len(raw_data), fargs=(particle_data, lines, tracks), interval=14, blit=False)
 
     if args.save:
         logger.info('Saving output in GIF format')
