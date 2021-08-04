@@ -5,7 +5,7 @@ stages:
    - test
 
 before_script:
-   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
+   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_100 x86_64-centos7-gcc10-opt
 
 build:
    stage: build
@@ -40,6 +40,6 @@ cmake:
 format:
    stage: test
    before_script:
-      - yum update && yum install clang-format -y
+      - yum update && yum install -y llvm-toolset-7-git-clang-format
    script:
       - clang-format --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")
