@@ -29,8 +29,8 @@ jobs:
   include:
   - name: cpp
     script:
-    - ./build/test/test
-    - ./build/test/test_earth
+    - ./build/test/cpp/test
+    - ./build/test/cpp/test_earth
     after_success: " "
   - name: cmake
     script:
