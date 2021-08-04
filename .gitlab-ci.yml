@@ -39,7 +39,8 @@ cmake:
 
 format:
    stage: test
+   image: gitlab/gitlab-runner:latest
    before_script:
-      - yum update && yum install -y llvm-toolset-7-git-clang-format
+      - apt-get update && apt-get install -y clang-format
    script:
       - clang-format --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")
