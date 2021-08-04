@@ -40,6 +40,6 @@ cmake:
 format:
    stage: test
    before_script:
-      - apt-get update && apt-get install clang-format -y
+      - yum update && yum install clang-format -y
    script:
       - clang-format --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")
