@@ -23,8 +23,9 @@ test:
    script:
       - ./build/test/cpp/test
       - ./build/test/cpp/test_earth
-   dependencies:
-      - build
+   needs:
+      - job: build
+        artifacts: true
 
 cmake:
    stage: test
@@ -34,8 +35,9 @@ cmake:
       - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../
       - make
       - ./main
-   dependencies:
-      - build
+   needs:
+      - job: build
+        artifacts: true
 
 format:
    stage: test
