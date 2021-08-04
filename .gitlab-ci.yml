@@ -5,7 +5,6 @@ stages:
    - test
 
 before_script:
-   - apt-get update && apt-get install clang-format -y
    - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
 
 build:
@@ -40,5 +39,7 @@ cmake:
 
 format:
    stage: test
+   before_script:
+      - apt-get update && apt-get install clang-format -y
    script:
       - clang-format --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")
