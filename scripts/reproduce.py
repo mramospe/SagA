@@ -7,11 +7,15 @@ import argparse
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas
+import logging
 import mpl_toolkits.mplot3d.axes3d as p3
 from matplotlib import animation
 
 
 if __name__ == '__main__':
+
+    logging.basicConfig(format='%(message)s', level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input_file', type=str, help='Data file to read')
@@ -27,6 +31,8 @@ if __name__ == '__main__':
     data = np.loadtxt(args.input_file)
 
     n_particles = data.shape[1] // 3
+
+    logger.info(f'Number of particles: {n_particles}')
 
     raw_data = pandas.DataFrame(np.zeros((data.shape[0], data.shape[1]), dtype=np.float32), columns=[f'p{i}_{c}' for i in range(n_particles) for c in ('x', 'y', 'z')])
     raw_data.loc[:,:] = data
@@ -79,9 +85,12 @@ if __name__ == '__main__':
     ax.set_ylim3d(args.y_range or (mn, mx))
     ax.set_zlim3d(args.z_range or (mn, mx))
 
+    logger.info('Start animation')
+
     ani = animation.FuncAnimation(fig, update, len(raw_data), fargs=(particle_data, lines), interval=14, blit=False)
 
     if args.save:
+        logger.info('Saving output in GIF format')
         ani.save('earth.gif', writer='imagemagick')
 
     plt.show()

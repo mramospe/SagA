@@ -1,4 +1,4 @@
-#include "saga/world.hpp"
+#include "saga/all.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -6,23 +6,15 @@ int main() {
 
   saga::world<saga::types::cpu::single_float_precision> world;
 
-  using float_type = saga::types::cpu::single_float_precision::float_type;
+  using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
 
-  float_type speed_of_light = 300.f;               // Mm * s^-1
-  float_type sun_mass = 1.;                        // Mo
-  float_type gravitational_constant = 0.00147462;  // Mo^-1 * Mm * c^2
-  float_type earth_mass = 3.003e-6;                // Mo
-  float_type delta_t_in_days = 1.;                 // days
-  float_type distance_from_earth_to_sun = 1.496e5; // Mm
-  float_type earth_velocity = 0.030f;              // Mm * s^-1
-
-  float_type delta_t = speed_of_light * delta_t_in_days * 24.f * 3600.f;
+  auto delta_t = sou::time_from_si(24.f * 3600.f);
 
   world.add_interaction<saga::gravitational_non_relativistic_interaction>(
-      gravitational_constant);
+      sou::gravitational_constant);
 
   world.configure([&](auto &container) {
-    container.resize(2);
+    container.resize(3);
 
     auto sun = container[0];
     sun.set_x(0);
@@ -33,24 +25,37 @@ int main() {
     sun.set_px(0);
     sun.set_py(0);
     sun.set_pz(0);
-    sun.set_e(sun_mass); // Mo * (Mm / s)^2
+    sun.set_e(sou::sun_mass); // Mo * (Mm / s)^2
 
     auto earth = container[1];
-    earth.set_x(distance_from_earth_to_sun); // Mm
+    earth.set_x(sou::earth_perihelion); // Mm
     earth.set_y(0);
     earth.set_z(0);
     earth.set_t(0);
 
     earth.set_px(0);
-    earth.set_py(earth_mass * earth_velocity / speed_of_light); // Mo * c
+    earth.set_py(sou::earth_mass * sou::earth_perihelion_velocity); // Mo * c
     earth.set_pz(0);
-    earth.set_e(earth_mass + 0.5 * earth_mass * earth_velocity *
-                                 earth_velocity /
-                                 (speed_of_light * speed_of_light)); // Mo * c^2
+    earth.set_e(sou::earth_mass +
+                0.5 * sou::earth_mass * sou::earth_perihelion_velocity *
+                    sou::earth_perihelion_velocity); // Mo * c^2
+
+    auto mars = container[2];
+    mars.set_x(earth.get_px() + sou::mars_perihelion); // Mm
+    mars.set_y(0);
+    mars.set_z(0);
+    mars.set_t(0);
+
+    mars.set_px(0);
+    mars.set_py(sou::mars_mass * sou::mars_perihelion_velocity); // Mo * c
+    mars.set_pz(0);
+    mars.set_e(sou::mars_mass + 0.5 * sou::mars_mass *
+                                    sou::mars_perihelion_velocity *
+                                    sou::mars_perihelion_velocity); // Mo * c^2
   });
 
   std::ofstream file;
-  file.open("data_earth.txt");
+  file.open("solar_system.txt");
 
   world.add_call_back_function([&file](auto const &container) {
     for (auto p : container) {
@@ -63,5 +68,5 @@ int main() {
     file << std::endl;
   });
 
-  world.run(3 * 365, delta_t); // 3 years
+  world.run(5 * 365, delta_t); // 3 years
 }

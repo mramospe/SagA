@@ -1,6 +1,4 @@
-#include "saga/particle.hpp"
-#include "saga/physics/core.hpp"
-#include "saga/world.hpp"
+#include "saga/all.hpp"
 #include <fstream>
 #include <iomanip>
 #include <iostream>
