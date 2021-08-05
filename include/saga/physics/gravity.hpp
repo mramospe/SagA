@@ -1,6 +1,6 @@
 #pragma once
-#include "saga/physics/interaction.hpp"
 #include "saga/physics/charge.hpp"
+#include "saga/physics/interaction.hpp"
 
 namespace saga::physics {
   /*!\brief Gravitational non-relativistic interaction

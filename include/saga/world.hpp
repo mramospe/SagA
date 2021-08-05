@@ -24,7 +24,7 @@ namespace saga {
     /// Type of the collection of functions which act as proxies for
     /// interactions
     using interactions_type =
-        saga::physics::interactions_variant<TypeDescriptor>;
+        saga::physics::interactions_variant<TypeDescriptor, Properties>;
     /// Type of the functions which act as proxies for interactions
     using interaction_type = typename interactions_type::value_type;
     /// Type of the collection of particles
@@ -58,19 +58,28 @@ namespace saga {
 
     /// Add a new interaction to the world
     template <class Interaction>
-    void add_interaction(Interaction &&interaction) {
+    std::enable_if_t<
+        saga::physics::is_available_interaction_v<Interaction, Properties>,
+        void>
+    add_interaction(Interaction &&interaction) {
       m_interactions.emplace_back(std::forward<Interaction>(interaction));
     }
 
     /// Add a new interaction to the world
     template <class Interaction>
-    void add_interaction(const Interaction &interaction) {
+    std::enable_if_t<
+        saga::physics::is_available_interaction_v<Interaction, Properties>,
+        void>
+    add_interaction(const Interaction &interaction) {
       m_interactions.emplace_back(interaction);
     }
 
     /// Add a new interaction to the world
     template <template <class> class Interaction, class... Args>
-    void add_interaction(Args &&... args) {
+    std::enable_if_t<
+        saga::physics::is_available_interaction_v<Interaction, Properties>,
+        void>
+    add_interaction(Args &&... args) {
       m_interactions.emplace_back(Interaction<TypeDescriptor>{args...});
     }
 
@@ -156,8 +165,8 @@ namespace saga {
           particle.set_px(particle.get_px() + force.get_x() * delta_t);
           particle.set_py(particle.get_py() + force.get_y() * delta_t);
           particle.set_pz(particle.get_pz() + force.get_z() * delta_t);
-	  // set the mass (and therefore the energy)
-	  particle.set_mass(mass);
+          // set the mass (and therefore the energy)
+          particle.set_mass(mass);
           // positions
           particle.set_x(particle.get_x() + particle.get_px() /
                                                 particle.get_mass() * 0.5 *

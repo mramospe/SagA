@@ -70,5 +70,6 @@ namespace saga {
         saga::core::property_configuration<detail::electric_charge,
                                            typename TypeDescriptor::float_type,
                                            TypeDescriptor::backend>;
+
   } // namespace property
 } // namespace saga
