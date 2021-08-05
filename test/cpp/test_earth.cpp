@@ -2,11 +2,54 @@
 #include <fstream>
 #include <iostream>
 
+using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
+
+template <class Planet, std::size_t I, class Particles>
+void prepare_planet(Particles &container) {
+
+  auto planet = container[I];
+
+  planet.set_x(Planet::perihelion); // Mm
+  planet.set_y(0);
+  planet.set_z(0);
+  planet.set_t(0);
+
+  planet.set_px(0);
+  planet.set_py(Planet::mass * Planet::perihelion_velocity); // Mo * c
+  planet.set_pz(0);
+  planet.set_e(Planet::mass + 0.5 * Planet::mass * Planet::perihelion_velocity *
+                                  Planet::perihelion_velocity); // Mo * c^2
+}
+
+template <class... Planet, class Particles, std::size_t... I>
+void prepare_for_planets_impl(Particles &container, std::index_sequence<I...>) {
+
+  (prepare_planet<Planet, I + 1>(container), ...);
+}
+
+template <class... Planet, class Particles>
+void prepare_for_planets(Particles &container) {
+
+  container.resize(1 + sizeof...(Planet));
+
+  auto sun = container[0];
+  sun.set_x(0);
+  sun.set_y(0);
+  sun.set_z(0);
+  sun.set_t(0);
+
+  sun.set_px(0);
+  sun.set_py(0);
+  sun.set_pz(0);
+  sun.set_e(sou::sun_mass); // Mo * (Mm / s)^2
+
+  prepare_for_planets_impl<Planet...>(
+      container, std::make_index_sequence<sizeof...(Planet)>());
+}
+
 int main() {
 
   saga::world<saga::types::cpu::single_float_precision> world;
-
-  using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
 
   auto delta_t = sou::time_from_si(24.f * 3600.f);
 
@@ -15,44 +58,9 @@ int main() {
       sou::gravitational_constant);
 
   world.configure([&](auto &container) {
-    container.resize(3);
-
-    auto sun = container[0];
-    sun.set_x(0);
-    sun.set_y(0);
-    sun.set_z(0);
-    sun.set_t(0);
-
-    sun.set_px(0);
-    sun.set_py(0);
-    sun.set_pz(0);
-    sun.set_e(sou::sun_mass); // Mo * (Mm / s)^2
-
-    auto earth = container[1];
-    earth.set_x(sou::earth_perihelion); // Mm
-    earth.set_y(0);
-    earth.set_z(0);
-    earth.set_t(0);
-
-    earth.set_px(0);
-    earth.set_py(sou::earth_mass * sou::earth_perihelion_velocity); // Mo * c
-    earth.set_pz(0);
-    earth.set_e(sou::earth_mass +
-                0.5 * sou::earth_mass * sou::earth_perihelion_velocity *
-                    sou::earth_perihelion_velocity); // Mo * c^2
-
-    auto mars = container[2];
-    mars.set_x(earth.get_px() + sou::mars_perihelion); // Mm
-    mars.set_y(0);
-    mars.set_z(0);
-    mars.set_t(0);
-
-    mars.set_px(0);
-    mars.set_py(sou::mars_mass * sou::mars_perihelion_velocity); // Mo * c
-    mars.set_pz(0);
-    mars.set_e(sou::mars_mass + 0.5 * sou::mars_mass *
-                                    sou::mars_perihelion_velocity *
-                                    sou::mars_perihelion_velocity); // Mo * c^2
+    prepare_for_planets<sou::mercury, sou::venus, sou::earth, sou::mars,
+                        sou::jupiter, sou::saturn, sou::uranus, sou::neptune>(
+        container);
   });
 
   std::ofstream file;

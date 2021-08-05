@@ -73,7 +73,7 @@ if __name__ == '__main__':
         assert(len(args.marker_sizes) == len(particle_data))
         marker_sizes = args.marker_sizes
     else:
-        marker_sizes = len(particle_data) * [10]
+        marker_sizes = len(particle_data) * [1]
 
     if args.show_tracks:
         logger.info('Tracks of the particles will be shown')
