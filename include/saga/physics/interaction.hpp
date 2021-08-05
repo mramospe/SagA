@@ -66,7 +66,7 @@ namespace saga::physics {
     central_force_non_relativistic(float_type k) : m_field_constant{k} {}
 
     /// Evaluate the force
-    return_type force(float_t tgt_mass, float_type tgt_x, float_type tgt_y,
+    return_type force(float_type tgt_mass, float_type tgt_x, float_type tgt_y,
                       float_type tgt_z, float_type src_mass, float_type src_x,
                       float_type src_y, float_type src_z) const override {
 

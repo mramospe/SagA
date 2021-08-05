@@ -2,69 +2,48 @@
 #include <fstream>
 #include <iostream>
 
-using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
-
-template <class Planet, std::size_t I, class Particles>
-void prepare_planet(Particles &container) {
-
-  auto planet = container[I];
-
-  planet.set_x(Planet::perihelion); // Mm
-  planet.set_y(0);
-  planet.set_z(0);
-  planet.set_t(0);
-
-  planet.set_px(0);
-  planet.set_py(Planet::mass * Planet::perihelion_velocity); // Mo * c
-  planet.set_pz(0);
-  planet.set_e(Planet::mass + 0.5 * Planet::mass * Planet::perihelion_velocity *
-                                  Planet::perihelion_velocity); // Mo * c^2
-}
-
-template <class... Planet, class Particles, std::size_t... I>
-void prepare_for_planets_impl(Particles &container, std::index_sequence<I...>) {
-
-  (prepare_planet<Planet, I + 1>(container), ...);
-}
-
-template <class... Planet, class Particles>
-void prepare_for_planets(Particles &container) {
-
-  container.resize(1 + sizeof...(Planet));
-
-  auto sun = container[0];
-  sun.set_x(0);
-  sun.set_y(0);
-  sun.set_z(0);
-  sun.set_t(0);
-
-  sun.set_px(0);
-  sun.set_py(0);
-  sun.set_pz(0);
-  sun.set_e(sou::sun_mass); // Mo * (Mm / s)^2
-
-  prepare_for_planets_impl<Planet...>(
-      container, std::make_index_sequence<sizeof...(Planet)>());
-}
+using sou = saga::earth_system<saga::types::cpu::single_float_precision>;
 
 int main() {
 
   saga::world<saga::types::cpu::single_float_precision> world;
 
-  auto delta_t = sou::time_from_si(24.f * 3600.f);
+  auto delta_t = sou::time_from_si(3600.);
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
       sou::gravitational_constant);
 
   world.configure([&](auto &container) {
-    prepare_for_planets<sou::mercury, sou::venus, sou::earth, sou::mars,
-                        sou::jupiter, sou::saturn, sou::uranus, sou::neptune>(
-        container);
+    container.resize(2);
+
+    auto earth = container[0];
+    earth.set_x(0);
+    earth.set_y(0);
+    earth.set_z(0);
+    earth.set_t(0);
+
+    earth.set_px(0);
+    earth.set_py(0);
+    earth.set_pz(0);
+    earth.set_e(sou::earth::mass);
+
+    auto moon = container[1];
+    moon.set_x(sou::moon::perigee);
+    moon.set_y(0);
+    moon.set_z(0);
+    moon.set_t(0);
+
+    moon.set_px(0);
+    moon.set_py(sou::moon::mass * sou::moon::perigee_velocity);
+    moon.set_pz(0);
+    moon.set_e(sou::moon::mass + 0.5 * sou::moon::mass *
+                                     sou::moon::perigee_velocity *
+                                     sou::moon::perigee_velocity);
   });
 
   std::ofstream file;
-  file.open("solar_system.txt");
+  file.open("earth.txt");
 
   world.add_call_back_function([&file](auto const &container) {
     for (auto p : container) {
