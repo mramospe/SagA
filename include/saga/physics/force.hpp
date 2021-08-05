@@ -9,14 +9,13 @@ namespace saga::physics {
   template <class TypeDescriptor>
   class forces : public saga::core::container_with_fields<
                      TypeDescriptor, saga::property::x, saga::property::y,
-                     saga::property::z, saga::property::t> {
+                     saga::property::z> {
 
   public:
     /// Base type
     using base_type =
         saga::core::container_with_fields<TypeDescriptor, saga::property::x,
-                                          saga::property::y, saga::property::z,
-                                          saga::property::t>;
+                                          saga::property::y, saga::property::z>;
     /// Constructors inherited from the base class
     using base_type::base_type;
 
@@ -43,13 +42,6 @@ namespace saga::physics {
     void set_z(std::size_t i, float_type v) {
       this->template set<saga::property::z>(i, v);
     }
-    auto const &get_t() const {
-      return this->template get<saga::property::t>();
-    }
-    auto &get_t() { return this->template get<saga::property::t>(); }
-    void set_t(std::size_t i, float_type v) {
-      this->template set<saga::property::t>(i, v);
-    }
 
     struct value_type : base_type::value_type {
 
@@ -70,11 +62,6 @@ namespace saga::physics {
       }
       auto &get_z() { return this->template get<saga::property::z>(); }
       void set_z(float_type v) { this->template set<saga::property::z>(v); }
-      auto const &get_t() const {
-        return this->template get<saga::property::t>();
-      }
-      auto &get_t() { return this->template get<saga::property::t>(); }
-      void set_t(float_type v) { this->template set<saga::property::t>(v); }
     };
 
     struct proxy_type : base_type::proxy_type {
@@ -131,13 +118,6 @@ namespace saga::physics {
       void set_z(float_type v) {
         this->container().template set<saga::property::z>(this->index(), v);
       }
-      auto const &get_t() const {
-        return this->template get<saga::property::t>();
-      }
-      auto &get_t() { return this->template get<saga::property::t>(); }
-      void set_t(float_type v) {
-        this->container().template set<saga::property::t>(this->index(), v);
-      }
     };
 
     struct const_proxy_type : base_type::const_proxy_type {
@@ -185,10 +165,6 @@ namespace saga::physics {
         return this->template get<saga::property::z>();
       }
       auto &get_z() { return this->template get<saga::property::z>(); }
-      auto const &get_t() const {
-        return this->template get<saga::property::t>();
-      }
-      auto &get_t() { return this->template get<saga::property::t>(); }
     };
 
     friend bool operator==(proxy_type const &f, proxy_type const &s) {

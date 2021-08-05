@@ -10,7 +10,8 @@ int main() {
 
   auto delta_t = sou::time_from_si(24.f * 3600.f);
 
-  world.add_interaction<saga::gravitational_non_relativistic_interaction>(
+  world.add_interaction<
+      saga::physics::gravitational_non_relativistic_interaction>(
       sou::gravitational_constant);
 
   world.configure([&](auto &container) {

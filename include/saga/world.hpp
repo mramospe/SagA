@@ -94,7 +94,7 @@ namespace saga {
 
         // set all forces to zero
         for (auto f : forces)
-          f.set(0.f, 0.f, 0.f, 0.f);
+          f.set(0.f, 0.f, 0.f);
 
         for (auto i = 0u; i < m_particles.size(); ++i) {
 
@@ -132,12 +132,11 @@ namespace saga {
 
                     auto pj = m_particles[j];
 
-                    auto res = arg(pi, pj, delta_t);
+                    auto res = arg(pi, pj);
 
                     force_i.set_x(force_i.get_x() + res.get_x());
                     force_i.set_y(force_i.get_y() + res.get_y());
                     force_i.set_z(force_i.get_z() + res.get_z());
-                    force_i.set_t(force_i.get_t() + res.get_t());
                   }
                 }
               },
@@ -157,7 +156,8 @@ namespace saga {
           particle.set_px(particle.get_px() + force.get_x() * delta_t);
           particle.set_py(particle.get_py() + force.get_y() * delta_t);
           particle.set_pz(particle.get_pz() + force.get_z() * delta_t);
-          particle.set_e(particle.get_e() + force.get_t() * delta_t);
+	  // set the mass (and therefore the energy)
+	  particle.set_mass(mass);
           // positions
           particle.set_x(particle.get_x() + particle.get_px() /
                                                 particle.get_mass() * 0.5 *
@@ -171,8 +171,6 @@ namespace saga {
           particle.set_t(particle.get_t() + particle.get_e() /
                                                 particle.get_mass() * 0.5 *
                                                 delta_t);
-
-          particle.set_mass(mass);
         }
 
         // call-back functions

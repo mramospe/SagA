@@ -4,11 +4,11 @@ Create an animation displaying the positions of particles at different points
 in time.
 """
 import argparse
-from matplotlib import pyplot as plt
 import numpy as np
 import pandas
 import logging
 import mpl_toolkits.mplot3d.axes3d as p3
+from matplotlib import pyplot as plt
 from matplotlib import animation
 
 
@@ -25,9 +25,13 @@ if __name__ == '__main__':
     parser.add_argument('--y-range', nargs=2, type=float, default=None, help='Range in Y')
     parser.add_argument('--z-range', nargs=2, type=float, default=None, help='Range in Z')
     parser.add_argument('--show-tracks', action='store_true', help='Whether to show a faint line with the track followed by the particles')
-    parser.add_argument('--save', action='store_true', help='Whether to save the output as a GIF')
+    parser.add_argument('--save', type=str, default=None, help='Name of the output file in which the animation will be saved as a GIF. Either --show or --save must be provided.')
+    parser.add_argument('--show', action='store_true', help='Whether to show the animation. Either --show or --save must be provided.')
 
     args = parser.parse_args()
+
+    if not args.show and not args.save:
+        raise RuntimeError('You must tell the script whether you want to show the result, save it or both (via --save/--show)')
 
     data = np.loadtxt(args.input_file)
 
@@ -100,10 +104,11 @@ if __name__ == '__main__':
 
     logger.info('Start animation')
 
-    ani = animation.FuncAnimation(fig, update, len(raw_data), fargs=(particle_data, lines, tracks), interval=14, blit=False)
+    ani = animation.FuncAnimation(fig, update, len(raw_data), fargs=(particle_data, lines, tracks), interval=14)
 
     if args.save:
-        logger.info('Saving output in GIF format')
-        ani.save('earth.gif', writer='imagemagick')
+        logger.info('Saving animation to an output file')
+        ani.save(args.save, writer='ffmpeg', fps=30)
 
-    plt.show()
+    if args.show:
+        plt.show()

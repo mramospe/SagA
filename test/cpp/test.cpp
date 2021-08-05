@@ -59,7 +59,8 @@ int main() {
               << (world.particles()[i].get<saga::property::e>()) << ' '
               << (world.particles()[i].get_mass()) << std::endl;
 
-  world.add_interaction<saga::gravitational_non_relativistic_interaction>();
+  world.add_interaction<
+      saga::physics::gravitational_non_relativistic_interaction>(1.f);
 
   std::ofstream file;
   file.open("data.txt");

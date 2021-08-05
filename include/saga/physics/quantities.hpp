@@ -18,6 +18,7 @@ namespace saga {
       struct py {};
       struct pz {};
       struct e {};
+      struct electric_charge {};
     } // namespace detail
 
     // Position
@@ -63,5 +64,11 @@ namespace saga {
                                            typename TypeDescriptor::float_type,
                                            TypeDescriptor::backend>;
 
+    // Additional
+    template <class TypeDescriptor>
+    using electric_charge =
+        saga::core::property_configuration<detail::electric_charge,
+                                           typename TypeDescriptor::float_type,
+                                           TypeDescriptor::backend>;
   } // namespace property
 } // namespace saga
