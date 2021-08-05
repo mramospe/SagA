@@ -134,18 +134,20 @@ namespace saga {
                   auto pi = m_particles[i];
                   auto force_i = forces[i];
 
-                  for (auto j = 0u; j < m_particles.size(); ++j) {
-
-                    if (i == j)
-                      continue;
+                  for (auto j = i + 1; j < m_particles.size(); ++j) {
 
                     auto pj = m_particles[j];
+                    auto force_j = forces[j];
 
                     auto res = arg(pi, pj);
 
                     force_i.set_x(force_i.get_x() + res.get_x());
                     force_i.set_y(force_i.get_y() + res.get_y());
                     force_i.set_z(force_i.get_z() + res.get_z());
+
+                    force_j.set_x(force_j.get_x() - res.get_x());
+                    force_j.set_y(force_j.get_y() - res.get_y());
+                    force_j.set_z(force_j.get_z() - res.get_z());
                   }
                 }
               },

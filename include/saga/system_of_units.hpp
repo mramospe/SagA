@@ -80,7 +80,7 @@ namespace saga {
       static constexpr float_type mass = 0.0553 * earth::mass; // Mo
       static constexpr float_type perihelion = 46.002;         // Gm
       static constexpr float_type perihelion_velocity =
-          69.8e-6 / speed_of_light; // c
+          58.98e-6 / speed_of_light; // c
     };
 
     struct venus {

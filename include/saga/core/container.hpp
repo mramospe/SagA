@@ -7,8 +7,8 @@
 
 namespace saga::core {
 
+  /// Reserve elements on a STL vector
   template <class TypeDescriptor> struct container_reserve {
-    /// Reserve elements on a STL vector
     template <class T>
     constexpr std::enable_if_t<
         types::is_type_descriptor_type_v<TypeDescriptor, std::decay_t<T>>, void>
@@ -17,8 +17,8 @@ namespace saga::core {
     }
   };
 
+  /// Change the size of a STL vector
   template <class TypeDescriptor> struct container_resize {
-    /// Change the size of a STL vector
     template <class T>
     constexpr std::enable_if_t<
         types::is_type_descriptor_type_v<TypeDescriptor, std::decay_t<T>>, void>
@@ -27,8 +27,8 @@ namespace saga::core {
     }
   };
 
+  /// Size of an STL vector
   template <class TypeDescriptor> struct container_size {
-    /// Size of an STL vector
     template <class T>
     constexpr std::enable_if_t<
         types::is_type_descriptor_type_v<TypeDescriptor, std::decay_t<T>>,
@@ -55,6 +55,7 @@ namespace saga::core {
         saga::core::fields::fields_pack<Field<TypeDescriptor>...>;
 
     container_with_fields() = default;
+    /// Construct the container with "n" elements
     container_with_fields(std::size_t n)
         : Field<TypeDescriptor>::container_type{n}... {}
     container_with_fields(container_with_fields const &) = default;
@@ -100,14 +101,17 @@ namespace saga::core {
       value_type &operator=(value_type &&) = default;
       value_type &operator=(value_type const &) = default;
 
+      /// Get the value of the given field
       template <template <class> class F> auto const &get() const {
         return F<TypeDescriptor>::value_type::get(*this);
       }
 
+      /// Get the value of the given field
       template <template <class> class F> auto &get() {
         return F<TypeDescriptor>::value_type::get(*this);
       }
 
+      /// Set the values of all the fields
       void set(typename Field<TypeDescriptor>::underlying_value_type... v) {
         (Field<TypeDescriptor>::value_type::set(*this, v), ...);
       }
@@ -119,73 +123,79 @@ namespace saga::core {
     class proxy_type : public Field<TypeDescriptor>::template proxy_type<
                            container_with_fields>... {
     public:
-      proxy_type(container_with_fields &cont, std::size_t idx)
-          : m_ptr{&cont}, m_idx{idx} {}
-
+      /// Container type
       using container_type = container_with_fields;
 
+      /// Build the proxy from the container and the index
+      proxy_type(container_type &cont, std::size_t idx)
+          : m_ptr{&cont}, m_idx{idx} {}
+
+      /// Assignment operator from a value type
       proxy_type &operator=(value_type const &other) {
 
-        (Field<TypeDescriptor>::template proxy_type<container_with_fields>::set(
+        (Field<TypeDescriptor>::template proxy_type<container_type>::set(
              *this, Field<TypeDescriptor>::value_type::get(other)),
          ...);
 
         return *this;
       }
 
+      /// Set each element in the associated field of the container
       void set(typename Field<TypeDescriptor>::underlying_value_type... value) {
 
-        (Field<TypeDescriptor>::template proxy_type<container_with_fields>::set(
-             *this, value),
+        (Field<TypeDescriptor>::template proxy_type<container_type>::set(*this,
+                                                                         value),
          ...);
       }
 
-      container_with_fields const *container_ptr() const { return m_ptr; }
-      container_with_fields &container() const override { return *m_ptr; }
-
+      /// Pointer to the container
+      container_type const *container_ptr() const { return m_ptr; }
+      /// Container passed as a reference
+      container_type &container() const override { return *m_ptr; }
+      /// Current index this proxy points to
       std::size_t index() const override { return m_idx; }
-
+      /// To allow STL-like operations
       proxy_type &operator*() { return *this; }
-
+      /// To allow STL-like operations
       proxy_type const &operator*() const { return *this; }
-
+      /// Increment the index
       proxy_type &operator++() {
         ++m_idx;
         return *this;
       }
-
+      /// Increment the index
       proxy_type operator++(int) {
 
         auto copy = *this;
         ++(*this);
         return copy;
       }
-
+      /// Decrement the index
       proxy_type &operator--() {
         --m_idx;
         return *this;
       }
-
+      /// Decrement the index
       proxy_type operator--(int) {
 
         auto copy = *this;
         --(*this);
         return copy;
       }
-
+      /// Get the value of one field from the container
       template <template <class> class F> auto const &get() const {
-        return F<TypeDescriptor>::template proxy_type<
-            container_with_fields>::get(*this);
+        return F<TypeDescriptor>::template proxy_type<container_type>::get(
+            *this);
       }
-
+      /// Get the value of one field from the container
       template <template <class> class F> auto &get() {
-        return F<TypeDescriptor>::template proxy_type<
-            container_with_fields>::get(*this);
+        return F<TypeDescriptor>::template proxy_type<container_type>::get(
+            *this);
       }
 
     protected:
       /// Pointer to the container
-      container_with_fields *m_ptr = nullptr;
+      container_type *m_ptr = nullptr;
       /// Index in the container
       std::size_t m_idx = 0;
     };
@@ -197,90 +207,95 @@ namespace saga::core {
         : public Field<TypeDescriptor>::template const_proxy_type<
               container_with_fields>... {
     public:
-      const_proxy_type(container_with_fields const &cont, std::size_t idx)
-          : m_ptr{&cont}, m_idx{idx} {}
-
+      /// Container type
       using container_type = container_with_fields;
 
-      container_with_fields const *container_ptr() const { return m_ptr; }
-      container_with_fields const &container() const override { return *m_ptr; }
+      /// Build the proxy from the container and the index
+      const_proxy_type(container_type const &cont, std::size_t idx)
+          : m_ptr{&cont}, m_idx{idx} {}
 
+      /// Pointer to the container
+      container_type const *container_ptr() const { return m_ptr; }
+      /// Container as a reference
+      container_type const &container() const override { return *m_ptr; }
+      /// Current index this proxy points to
       std::size_t index() const override { return m_idx; }
-
+      /// For compatibility with STL-like syntax
       const_proxy_type &operator*() { return *this; }
-
+      /// For compatibility with STL-like syntax
       const_proxy_type &operator*() const { return *this; }
-
+      /// Increment the index
       const_proxy_type &operator++() {
         ++m_idx;
         return *this;
       }
-
+      /// Increment the index
       const_proxy_type operator++(int) {
 
         auto copy = *this;
         ++(*this);
         return copy;
       }
-
+      /// Decrement the index
       const_proxy_type &operator--() {
         --m_idx;
         return *this;
       }
-
+      /// Decrement the index
       const_proxy_type operator--(int) {
 
         auto copy = *this;
         --(*this);
         return copy;
       }
-
+      /// Get the value of the field
       template <template <class> class F> auto const &get() const {
         return F<TypeDescriptor>::template const_proxy_type<
-            container_with_fields>::get(*this);
+            container_type>::get(*this);
       }
 
     protected:
       /// Pointer to the container
-      container_with_fields const *m_ptr = nullptr;
+      container_type const *m_ptr = nullptr;
       /// Index in the container
       std::size_t m_idx = 0;
     };
 
+    /// Comparison operator of two proxies
     friend bool operator==(proxy_type const &f, proxy_type const &s) {
       return (f.container_ptr() == s.container_ptr()) &&
              (f.index() == s.index());
     }
-
+    /// Comparison operator of two proxies to constant containers
     friend bool operator==(const_proxy_type const &f,
                            const_proxy_type const &s) {
       return (f.container_ptr() == s.container_ptr()) &&
              (f.index() == s.index());
     }
-
+    /// Comparison operator of two proxies with different cv qualifiers
     friend bool operator==(const_proxy_type const &f, proxy_type const &s) {
       return (f.container_ptr() == s.container_ptr()) &&
              (f.index() == s.index());
     }
-
+    /// Comparison operator of two proxies with different cv qualifiers
     friend bool operator==(proxy_type const &f, const_proxy_type const &s) {
       return (f.container_ptr() == s.container_ptr()) &&
              (f.index() == s.index());
     }
-
+    /// Comparison operator of two proxies
     friend bool operator!=(proxy_type const &f, proxy_type const &s) {
       return !(f == s);
     }
-
+    /// Comparison operator of two proxies to constant containers
     friend bool operator!=(const_proxy_type const &f,
                            const_proxy_type const &s) {
       return !(f == s);
     }
-
+    /// Comparison operator of two proxies with different cv qualifiers
     friend bool operator!=(const_proxy_type const &f, proxy_type const &s) {
       return !(f == s);
     }
-
+    /// Comparison operator of two proxies with different cv qualifiers
     friend bool operator!=(proxy_type const &f, const_proxy_type const &s) {
       return !(f == s);
     }
@@ -294,22 +309,23 @@ namespace saga::core {
       return const_proxy_type(*this, idx);
     }
 
+    /// Get the container associated to the given field
     template <template <class> class F> auto &get() {
       return F<TypeDescriptor>::container_type::get(*this);
     }
-
+    /// Get the container associated to the given field
     template <template <class> class F> auto const &get() const {
       return F<TypeDescriptor>::container_type::get(*this);
     }
-
+    /// Get the value associated to the given field and index in the container
     template <template <class> class F> auto &get(std::size_t i) {
       return F<TypeDescriptor>::container_type::get(*this, i);
     }
-
+    /// Get the value associated to the given field and index in the container
     template <template <class> class F> auto const &get(std::size_t i) const {
       return F<TypeDescriptor>::container_type::get(*this, i);
     }
-
+    /// Set the value associated to the given field and index in the container
     template <template <class> class F>
     void set(std::size_t i,
              typename F<TypeDescriptor>::underlying_value_type v) {

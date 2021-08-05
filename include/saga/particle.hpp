@@ -29,8 +29,6 @@ namespace saga {
           particle_container_base_type<TypeDescriptor, Property...>;
       /// Constructors inherited from the base class
       using base_type::base_type;
-      /// List of fields
-      using fields_type = typename base_type::fields_type;
 
       using float_type = typename TypeDescriptor::float_type;
 
