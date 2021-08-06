@@ -6,6 +6,8 @@
 
 namespace saga::physics {
 
+  /*!\brief Container of forces
+   */
   template <class TypeDescriptor>
   class forces : public saga::core::container_with_fields<
                      TypeDescriptor, saga::property::x, saga::property::y,
@@ -43,9 +45,23 @@ namespace saga::physics {
       this->template set<saga::property::z>(i, v);
     }
 
-    struct value_type : base_type::value_type {
+    // Forward declarations
+    class value_type;
+    class proxy_type;
+    class const_proxy_type;
 
+    class value_type : public base_type::value_type {
+    public:
       using base_type::value_type::value_type;
+
+      value_type &operator=(proxy_type const &p) {
+        base_type::value_type::operator=(p);
+        return *this;
+      }
+      value_type &operator=(const_proxy_type const &p) {
+        base_type::value_type::operator=(p);
+        return *this;
+      }
 
       auto const &get_x() const {
         return this->template get<saga::property::x>();
@@ -64,9 +80,37 @@ namespace saga::physics {
       void set_z(float_type v) { this->template set<saga::property::z>(v); }
     };
 
-    struct proxy_type : base_type::proxy_type {
+    class proxy_type : public base_type::proxy_type {
+    public:
+      using container_type = forces;
 
-      using base_type::proxy_type::proxy_type;
+      /// Build the proxy from the container and the index
+      proxy_type(container_type &cont, std::size_t idx)
+          : base_type::proxy_type(cont, idx) {}
+      proxy_type(proxy_type &&other)
+          : base_type::proxy_type(other.container(), other.index()) {}
+      proxy_type(proxy_type const &other)
+          : base_type::proxy_type(other.container(), other.index()) {}
+
+      proxy_type &operator=(proxy_type const &p) {
+        base_type::proxy_type::operator=(p);
+        return *this;
+      }
+
+      proxy_type &operator=(proxy_type &&p) {
+        base_type::proxy_type::operator=(p);
+        return *this;
+      }
+
+      proxy_type &operator=(value_type const &p) {
+        base_type::proxy_type::operator=(p);
+        return *this;
+      }
+
+      proxy_type &operator=(value_type &&p) {
+        base_type::proxy_type::operator=(p);
+        return *this;
+      }
 
       proxy_type &operator*() { return *this; }
 
@@ -74,7 +118,6 @@ namespace saga::physics {
 
       proxy_type &operator++() {
         base_type::proxy_type::operator++();
-        ;
         return *this;
       }
 
@@ -120,9 +163,26 @@ namespace saga::physics {
       }
     };
 
-    struct const_proxy_type : base_type::const_proxy_type {
+    class const_proxy_type : public base_type::const_proxy_type {
+    public:
+      using container_type = forces;
 
-      using base_type::const_proxy_type::const_proxy_type;
+      const_proxy_type(container_type const &cont, std::size_t idx)
+          : base_type::const_proxy_type(cont, idx) {}
+      const_proxy_type(const_proxy_type &&other)
+          : base_type::const_proxy_type(other.container(), other.index()) {}
+      const_proxy_type(const_proxy_type const &other)
+          : base_type::const_proxy_type(other.container(), other.index()) {}
+
+      const_proxy_type &operator=(const_proxy_type const &p) {
+        base_type::proxy_type::operator=(p);
+        return *this;
+      }
+
+      const_proxy_type &operator=(const_proxy_type &&p) {
+        base_type::proxy_type::operator=(p);
+        return *this;
+      }
 
       const_proxy_type &operator*() { return *this; }
 
@@ -130,7 +190,6 @@ namespace saga::physics {
 
       const_proxy_type &operator++() {
         base_type::const_proxy_type::operator++();
-        ;
         return *this;
       }
 

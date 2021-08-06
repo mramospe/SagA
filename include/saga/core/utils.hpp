@@ -8,7 +8,7 @@ namespace saga::core {
 
   /// Get the index of the type in the list of types
   template <class Match, class T0, class... T> struct index<Match, T0, T...> {
-    static constexpr auto value = index<Match, T...>::value;
+    static constexpr auto value = index<Match, T...>::value + 1;
   };
 
   /// Get the index of the type in the list of types
@@ -19,6 +19,27 @@ namespace saga::core {
   /// Get the type at the given position
   template <class Match, class... T>
   static constexpr auto index_v = index<Match, T...>::value;
+
+  /// Get the index of the type in the list of types
+  template <template <class> class Match, template <class> class... T>
+  struct template_index;
+
+  /// Get the index of the type in the list of types
+  template <template <class> class Match, template <class> class T0,
+            template <class> class... T>
+  struct template_index<Match, T0, T...> {
+    static constexpr auto value = template_index<Match, T...>::value + 1;
+  };
+
+  /// Get the index of the type in the list of types
+  template <template <class> class Match, template <class> class... T>
+  struct template_index<Match, Match, T...> {
+    static constexpr auto value = 0u;
+  };
+
+  /// Get the type at the given position
+  template <template <class> class Match, template <class> class... T>
+  static constexpr auto template_index_v = template_index<Match, T...>::value;
 
   /// Get the type at the given position
   template <std::size_t I, class T0, class... T> struct type_at {

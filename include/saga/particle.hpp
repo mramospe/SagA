@@ -89,9 +89,23 @@ namespace saga {
         this->template set<saga::property::e>(i, v);
       }
 
-      struct value_type : base_type::value_type {
+      class value_type;
+      class proxy_type;
+      class const_proxy_type;
 
+      class value_type : public base_type::value_type {
+
+      public:
         using base_type::value_type::value_type;
+
+        value_type &operator=(proxy_type const &p) {
+          base_type::value_type::operator=(p);
+          return *this;
+        }
+        value_type &operator=(const_proxy_type const &p) {
+          base_type::value_type::operator=(p);
+          return *this;
+        }
 
         auto const &get_x() const {
           return this->template get<saga::property::x>();
@@ -147,9 +161,32 @@ namespace saga {
         }
       };
 
-      struct proxy_type : base_type::proxy_type {
+      class proxy_type : public base_type::proxy_type {
 
-        using base_type::proxy_type::proxy_type;
+      public:
+        using container_type = particle_container;
+
+        proxy_type(container_type &cont, std::size_t idx)
+            : base_type::proxy_type(cont, idx) {}
+        proxy_type(proxy_type &&other)
+            : base_type::proxy_type(other.container(), other.index()) {}
+        proxy_type(proxy_type const &other)
+            : base_type::proxy_type(other.container(), other.index()) {}
+
+        proxy_type &operator=(proxy_type const &p) {
+          base_type::proxy_type::operator=(p);
+          return *this;
+        }
+
+        proxy_type &operator=(proxy_type &&p) {
+          base_type::proxy_type::operator=(p);
+          return *this;
+        }
+
+        proxy_type &operator=(value_type const &p) {
+          base_type::proxy_type::operator=(p);
+          return *this;
+        }
 
         proxy_type &operator*() { return *this; }
 
@@ -250,9 +287,16 @@ namespace saga {
         }
       };
 
-      struct const_proxy_type : base_type::const_proxy_type {
+      class const_proxy_type : public base_type::const_proxy_type {
+      public:
+        using container_type = particle_container;
 
-        using base_type::const_proxy_type::const_proxy_type;
+        const_proxy_type(container_type const &cont, std::size_t idx)
+            : base_type::const_proxy_type(cont, idx) {}
+        const_proxy_type(const_proxy_type &&other)
+            : base_type::const_proxy_type(other.container(), other.index()) {}
+        const_proxy_type(const_proxy_type const &other)
+            : base_type::const_proxy_type(other.container(), other.index()) {}
 
         const_proxy_type &operator*() { return *this; }
 
@@ -260,7 +304,6 @@ namespace saga {
 
         const_proxy_type &operator++() {
           base_type::const_proxy_type::operator++();
-          ;
           return *this;
         }
 

@@ -1,6 +1,5 @@
 #include "saga/all.hpp"
 #include <fstream>
-#include <iostream>
 
 using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
 
@@ -67,11 +66,18 @@ int main() {
   file.open("solar_system.txt");
 
   world.add_call_back_function([&file](auto const &container) {
-    for (auto p : container) {
+    auto n = container.size();
+
+    for (auto i = 0u; i < n; ++i) {
+
+      auto p = container[i];
+
+      if (i > 0)
+        file << ' ';
 
       file << (p.template get<saga::property::x>()) << ' '
            << (p.template get<saga::property::y>()) << ' '
-           << (p.template get<saga::property::z>()) << ' ';
+           << (p.template get<saga::property::z>());
     }
 
     file << std::endl;

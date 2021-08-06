@@ -23,12 +23,8 @@ namespace saga::physics {
     /// Evaluate the force for two objects
     template <class Proxy>
     Output operator()(Proxy const &src, Proxy const &tgt) const {
-      return force(charge(src),
-                   Property<TypeDescriptor>::template proxy_type<
-                       typename Proxy::container_type>::get(src)...,
-                   charge(tgt),
-                   Property<TypeDescriptor>::template proxy_type<
-                       typename Proxy::container_type>::get(tgt)...);
+      return force(charge(src), src.template get<Property>()..., charge(tgt),
+                   tgt.template get<Property>()...);
     }
 
     /// Evaluate the force given the two sets of properties
