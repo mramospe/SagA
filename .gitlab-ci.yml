@@ -21,8 +21,9 @@ build:
 test:
    stage: test
    script:
-      - ./build/test/cpp/test
+      - ./build/test/cpp/test_core
       - ./build/test/cpp/test_containers
+      - ./build/test/cpp/test_world
    needs:
       - job: build
         artifacts: true
