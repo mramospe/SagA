@@ -94,10 +94,10 @@ namespace saga::core {
           : value_type(p.template get<Field>()...){};
 
       value_type &operator=(proxy_type const &p) {
-        set(p.template get<Field>(p)...);
+        (set<Field>(p.template get<Field>(p)), ...);
       }
       value_type &operator=(const_proxy_type const &p) {
-        set(p.template get<Field>(p)...);
+        (set<Field>(p.template get<Field>(p)), ...);
       }
 
       /// Get the value of the given field
@@ -111,9 +111,9 @@ namespace saga::core {
       }
 
       /// Set the values of all the fields
-      void
-      set(saga::core::underlying_value_type_t<Field<TypeDescriptor>>... v) {
-        base_type::operator=(v...);
+      template <template <class> class F>
+      void set(saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
+        std::get<saga::core::template_index_v<F, Field...>>() = v;
       }
     };
 
@@ -135,34 +135,34 @@ namespace saga::core {
 
       proxy_type &operator=(proxy_type const &other) {
 
-        set(other.template get<Field>()...);
+        (set<Field>(other.template get<Field>()), ...);
         return *this;
       }
       proxy_type &operator=(proxy_type &&other) {
 
-        set(other.template get<Field>()...);
+        (set<Field>(other.template get<Field>()), ...);
         return *this;
       }
 
       /// Assignment operator from a value type
       proxy_type &operator=(value_type const &other) {
 
-        set(other.template get<Field>()...);
+        (set<Field>(other.template get<Field>()), ...);
         return *this;
       }
 
       /// Assignment operator from a value type
       proxy_type &operator=(value_type &&other) {
 
-        set(other.template get<Field>()...);
+        (set<Field>(other.template get<Field>()), ...);
         return *this;
       }
 
       /// Set each element in the associated field of the container
-      void
-      set(saga::core::underlying_value_type_t<Field<TypeDescriptor>>... value) {
+      template <template <class> class F>
+      void set(saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
 
-        (m_ptr->template set<Field>(m_idx, value), ...);
+        m_ptr->template set<F>(m_idx, v);
       }
 
       /// Pointer to the container

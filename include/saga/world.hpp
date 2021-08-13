@@ -39,6 +39,9 @@ namespace saga {
     using call_back_type = typename call_back_vector_type::value_type;
     /// Type of the configuration functions
     using configuration_function_type = std::function<void(particles_type &)>;
+    /// Type of the function evaluating collisions
+    using collision_handler_type =
+        std::function<void(float_type, particles_type &)>;
 
     /// The world is constructed without arguments
     world() = default;
@@ -98,6 +101,13 @@ namespace saga {
 
       saga::physics::forces<TypeDescriptor> forces(m_particles.size());
 
+      auto integrate_position = [&delta_t](auto &p) -> void {
+        p.set_x(p.get_x() + p.get_px() / p.get_mass() * 0.5 * delta_t);
+        p.set_y(p.get_y() + p.get_py() / p.get_mass() * 0.5 * delta_t);
+        p.set_z(p.get_z() + p.get_pz() / p.get_mass() * 0.5 * delta_t);
+        p.set_t(p.get_t() + p.get_e() / p.get_mass() * 0.5 * delta_t);
+      };
+
       // execute the call-back functions at the begining of the execution
       for (auto f : m_call_back_functions)
         f(m_particles);
@@ -106,26 +116,15 @@ namespace saga {
 
         // set all forces to zero
         for (auto f : forces)
-          f.set(0.f, 0.f, 0.f);
+          f = {0.f, 0.f, 0.f};
 
-        for (auto i = 0u; i < m_particles.size(); ++i) {
+        // first estimation of the positions
+        for (auto p : m_particles)
+          integrate_position(p);
 
-          auto particle = m_particles[i];
-
-          // first estimation of the positions
-          particle.set_x(particle.get_x() + particle.get_px() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-          particle.set_y(particle.get_y() + particle.get_py() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-          particle.set_z(particle.get_z() + particle.get_pz() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-          particle.set_t(particle.get_t() + particle.get_e() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-        }
+        // check if with the final step we have collisions and handle them
+        if (m_collision_handler)
+          m_collision_handler(delta_t, m_particles);
 
         // place where the point-to-point interactions are evaluated
         for (auto inter : m_interactions) {
@@ -157,7 +156,7 @@ namespace saga {
               inter);
         }
 
-        // integration
+        // integrate the momenta
         for (auto i = 0u; i < m_particles.size(); ++i) {
 
           auto particle = m_particles[i];
@@ -172,25 +171,33 @@ namespace saga {
           particle.set_pz(particle.get_pz() + force.get_z() * delta_t);
           // set the mass (and therefore the energy)
           particle.set_mass(mass);
-          // positions
-          particle.set_x(particle.get_x() + particle.get_px() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-          particle.set_y(particle.get_y() + particle.get_py() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-          particle.set_z(particle.get_z() + particle.get_pz() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
-          particle.set_t(particle.get_t() + particle.get_e() /
-                                                particle.get_mass() * 0.5 *
-                                                delta_t);
+
+          // integrate the positions
+          integrate_position(particle);
         }
 
         // call-back functions
         for (auto f : m_call_back_functions)
           f(m_particles);
       }
+    }
+
+    /// Add a new interaction to the world
+    template <class CollisionHandler>
+    void set_collision_handler(CollisionHandler &&f) {
+      m_collision_handler = std::forward<CollisionHandler>(f);
+    }
+
+    /// Add a new interaction to the world
+    template <class CollisionHandler>
+    void set_collision_handler(const CollisionHandler &f) {
+      m_collision_handler = CollisionHandler(f);
+    }
+
+    /// Add a new interaction to the world
+    template <template <class> class CollisionHandler, class... Args>
+    void set_collision_handler(Args &&... args) {
+      m_collision_handler = CollisionHandler(args...);
     }
 
   protected:
@@ -200,5 +207,7 @@ namespace saga {
     interactions_type m_interactions;
     /// Collection of functions to be called at the end of each step
     call_back_vector_type m_call_back_functions;
+    /// Functor to determine and handle collisions
+    collision_handler_type m_collision_handler;
   };
 } // namespace saga

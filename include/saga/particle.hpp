@@ -62,6 +62,8 @@ namespace saga {
           particle_container_base_type<TypeDescriptor, Shape, Property...>;
       /// Constructors inherited from the base class
       using base_type::base_type;
+      /// Shape type
+      using shape_type = Shape<TypeDescriptor>;
 
       using float_type = typename TypeDescriptor::float_type;
 
@@ -130,6 +132,7 @@ namespace saga {
 
       public:
         using base_type::value_type::value_type;
+        using shape_type = particle_container::shape_type;
 
         value_type &operator=(proxy_type const &p) {
           base_type::value_type::operator=(p);
@@ -198,6 +201,7 @@ namespace saga {
 
       public:
         using container_type = particle_container;
+        using shape_type = container_type::shape_type;
 
         proxy_type(container_type &cont, std::size_t idx)
             : base_type::proxy_type(cont, idx) {}
@@ -323,6 +327,7 @@ namespace saga {
       class const_proxy_type : public base_type::const_proxy_type {
       public:
         using container_type = particle_container;
+        using shape_type = container_type::shape_type;
 
         const_proxy_type(container_type const &cont, std::size_t idx)
             : base_type::const_proxy_type(cont, idx) {}
