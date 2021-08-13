@@ -2,6 +2,7 @@
 #include "saga/particle.hpp"
 #include "saga/physics/core.hpp"
 #include "saga/physics/force.hpp"
+#include "saga/physics/shape.hpp"
 #include <functional>
 #include <variant>
 #include <vector>
@@ -15,7 +16,9 @@ namespace saga {
     defining the initial locations, their momenta and the interactions among
     them.
    */
-  template <class TypeDescriptor, class Properties = saga::properties<>>
+  template <class TypeDescriptor,
+            template <class> class Shape = saga::physics::point,
+            class Properties = saga::properties<>>
   class world {
 
   public:
@@ -28,7 +31,7 @@ namespace saga {
     /// Type of the functions which act as proxies for interactions
     using interaction_type = typename interactions_type::value_type;
     /// Type of the collection of particles
-    using particles_type = saga::particles<TypeDescriptor, Properties>;
+    using particles_type = saga::particles<TypeDescriptor, Shape, Properties>;
     /// Type of the collection of functions called at the end of a step
     using call_back_vector_type =
         std::vector<std::function<void(particles_type const &)>>;

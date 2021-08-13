@@ -5,7 +5,19 @@
 
 namespace saga {
 
-  template <template <class T> class... Property> struct properties {};
+  template <template <class> class... Property> struct properties {};
+
+  template <class Properties, template <class> class... P>
+  struct append_properties;
+
+  template <template <class> class... P0, template <class> class... P1>
+  struct append_properties<properties<P0...>, P1...> {
+    using type = properties<P0..., P1...>;
+  };
+
+  template <class Properties, template <class> class... P>
+  using append_properties_t =
+      typename append_properties<Properties, P...>::type;
 
   namespace property {
 

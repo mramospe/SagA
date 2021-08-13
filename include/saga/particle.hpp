@@ -3,30 +3,63 @@
 #include "saga/core/fields.hpp"
 #include "saga/core/types.hpp"
 #include "saga/physics/quantities.hpp"
+#include "saga/physics/shape.hpp"
 #include <cmath>
 
 namespace saga {
 
-  namespace core {
+  namespace detail {
+
+    template <class TypeDescriptor, class Properties>
+    struct container_with_fields_from_properties;
+
+    template <class TypeDescriptor, template <class> class... Property>
+    struct container_with_fields_from_properties<
+        TypeDescriptor, saga::properties<Property...>> {
+      using type =
+          saga::core::container_with_fields<TypeDescriptor, Property...>;
+    };
+
+    template <class TypeDescriptor, class Properties>
+    using container_with_fields_from_properties_t =
+        typename container_with_fields_from_properties<TypeDescriptor,
+                                                       Properties>::type;
+
+    template <class TypeDescriptor, template <class> class Shape,
+              template <class> class... Property>
+    using container_with_fields_from_properties_and_shape_t =
+        container_with_fields_from_properties_t<
+            TypeDescriptor,
+            saga::append_properties_t<
+                typename Shape<TypeDescriptor>::properties, Property...>>;
 
     /// Base type for a container of particles
-    template <class TypeDescriptor, template <class> class... Property>
-    using particle_container_base_type = container_with_fields<
-        TypeDescriptor, saga::property::x, saga::property::y, saga::property::z,
-        saga::property::t, saga::property::px, saga::property::py,
-        saga::property::pz, saga::property::e, Property...>;
+    template <class TypeDescriptor, template <class> class Shape,
+              template <class> class... Property>
+    using particle_container_base_type =
+        detail::container_with_fields_from_properties_and_shape_t<
+            TypeDescriptor, Shape, saga::property::x, saga::property::y,
+            saga::property::z, saga::property::t, saga::property::px,
+            saga::property::py, saga::property::pz, saga::property::e,
+            Property...>;
 
     /// Container of particles
-    template <class TypeDescriptor, class Properties> class particle_container;
+    template <class TypeDescriptor,
+              template <class> class Shape = saga::physics::point,
+              class Properties = saga::properties<>>
+    class particle_container;
 
     /// Container of particles
-    template <class TypeDescriptor, template <class T> class... Property>
-    class particle_container<TypeDescriptor, saga::properties<Property...>>
-        : public particle_container_base_type<TypeDescriptor, Property...> {
+    template <class TypeDescriptor, template <class T> class Shape,
+              template <class T> class... Property>
+    class particle_container<TypeDescriptor, Shape,
+                             saga::properties<Property...>>
+        : public particle_container_base_type<TypeDescriptor, Shape,
+                                              Property...> {
     public:
       /// Base type
       using base_type =
-          particle_container_base_type<TypeDescriptor, Property...>;
+          particle_container_base_type<TypeDescriptor, Shape, Property...>;
       /// Constructors inherited from the base class
       using base_type::base_type;
 
@@ -429,14 +462,20 @@ namespace saga {
       /// End of the container
       auto cend() const { return const_proxy_type(*this, this->size()); }
     };
-  } // namespace core
+  } // namespace detail
 
   /// Template for particles
-  template <class TypeDescriptor, class Properties = saga::properties<>>
-  using particles = saga::core::particle_container<TypeDescriptor, Properties>;
+  template <class TypeDescriptor,
+            template <class> class Shape = saga::physics::point,
+            class Properties = saga::properties<>>
+  using particles =
+      saga::detail::particle_container<TypeDescriptor, Shape, Properties>;
 
   /// Standard template for individual particles
-  template <class TypeDescriptor, class Properties = saga::properties<>>
-  using particle = typename particles<TypeDescriptor, Properties>::value_type;
+  template <class TypeDescriptor,
+            template <class> class Shape = saga::physics::point,
+            class Properties = saga::properties<>>
+  using particle =
+      typename particles<TypeDescriptor, Shape, Properties>::value_type;
 
 } // namespace saga
