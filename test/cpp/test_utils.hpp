@@ -146,6 +146,8 @@ namespace saga::test {
     auto proxy = container[1];
 
     proxy = value;
+    value = container[1];
+    value = container.cbegin();
 
     return errors;
   }

@@ -94,10 +94,12 @@ namespace saga::core {
           : value_type(p.template get<Field>()...){};
 
       value_type &operator=(proxy_type const &p) {
-        (set<Field>(p.template get<Field>(p)), ...);
+        (set<Field>(p.template get<Field>()), ...);
+        return *this;
       }
       value_type &operator=(const_proxy_type const &p) {
-        (set<Field>(p.template get<Field>(p)), ...);
+        (set<Field>(p.template get<Field>()), ...);
+        return *this;
       }
 
       /// Get the value of the given field
@@ -113,7 +115,7 @@ namespace saga::core {
       /// Set the values of all the fields
       template <template <class> class F>
       void set(saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
-        std::get<saga::core::template_index_v<F, Field...>>() = v;
+        std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
       }
     };
 
