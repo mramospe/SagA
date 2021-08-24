@@ -197,7 +197,7 @@ namespace saga {
     /// Add a new interaction to the world
     template <template <class> class CollisionHandler, class... Args>
     void set_collision_handler(Args &&... args) {
-      m_collision_handler = CollisionHandler(args...);
+      m_collision_handler = CollisionHandler<TypeDescriptor>(args...);
     }
 
   protected:
