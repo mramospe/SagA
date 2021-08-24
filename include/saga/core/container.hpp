@@ -112,6 +112,11 @@ namespace saga::core {
         return std::get<saga::core::template_index_v<F, Field...>>(*this);
       }
 
+      /// Whether this class has the specified property
+      template <template <class> class Property> constexpr bool has() const {
+        return saga::core::is_template_in_v<Property, Field...>;
+      }
+
       /// Set the values of all the fields
       template <template <class> class F>
       void set(saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
@@ -201,6 +206,10 @@ namespace saga::core {
         --(*this);
         return copy;
       }
+      /// Whether this class has the specified property
+      template <template <class> class Property> constexpr bool has() const {
+        return saga::core::is_template_in_v<Property, Field...>;
+      }
       /// Get the value of one field from the container
       template <template <class> class F> auto const &get() const {
         return m_ptr->template get<F>()[m_idx];
@@ -267,6 +276,10 @@ namespace saga::core {
         auto copy = *this;
         --(*this);
         return copy;
+      }
+      /// Whether this class has the specified property
+      template <template <class> class Property> constexpr bool has() const {
+        return saga::core::is_template_in_v<Property, Field...>;
       }
       /// Get the value of the field
       template <template <class> class F> auto const &get() const {
@@ -343,6 +356,10 @@ namespace saga::core {
     /// Get the value associated to the given field and index in the container
     template <template <class> class F> auto const &get(std::size_t i) const {
       return this->template get<F>()[i];
+    }
+    /// Whether this class has the specified property
+    template <template <class> class Property> constexpr bool has() const {
+      return saga::core::is_template_in_v<Property, Field...>;
     }
     /// Set the value associated to the given field and index in the container
     template <template <class> class F>

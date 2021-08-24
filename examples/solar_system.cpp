@@ -1,3 +1,4 @@
+#include "dump.hpp"
 #include "saga/all.hpp"
 #include <fstream>
 
@@ -62,26 +63,10 @@ int main() {
         container);
   });
 
-  std::ofstream file;
-  file.open("solar_system.txt");
+  std::ofstream file{"solar_system.txt"};
+  ;
+  std::size_t counter = 0;
+  world.add_call_back_function(SAGA_DUMP_TO_FILE(file, counter));
 
-  world.add_call_back_function([&file](auto const &container) {
-    auto n = container.size();
-
-    for (auto i = 0u; i < n; ++i) {
-
-      auto p = container[i];
-
-      if (i > 0)
-        file << ' ';
-
-      file << (p.template get<saga::property::x>()) << ' '
-           << (p.template get<saga::property::y>()) << ' '
-           << (p.template get<saga::property::z>());
-    }
-
-    file << std::endl;
-  });
-
-  world.run(5 * 365, delta_t); // 3 years
+  world.run(5 * 365, delta_t); // 5 years
 }

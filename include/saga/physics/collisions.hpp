@@ -40,37 +40,41 @@ namespace saga::physics::collision {
 
       float_type d2 = dx * dx + dy * dy + dz * dz;
 
-      m_a = dpx * dpx + dpy * dpy + dpz * dpz;
-      m_b = 2 * (dx * dpx + dy * dpy + dz * dpz);
+      float_type a = dpx * dpx + dpy * dpy + dpz * dpz;
+      float_type b = 2 * (dx * dpx + dy * dpy + dz * dpz);
       float_type c = d2 - R * R;
 
-      m_sqrt_arg = m_b * m_b - 4 * m_a * c;
+      float_type sqrt_arg = b * b - 4 * a * c;
+
+      // cases where particles are at rest
+      if (std::abs(a) <= saga::types::numeric_info<TypeDescriptor>::min) {
+        m_dt = saga::types::numeric_info<TypeDescriptor>::max;
+      } else {
+
+        if (sqrt_arg < 0)
+          m_dt = saga::types::numeric_info<TypeDescriptor>::max;
+        else if (sqrt_arg <= saga::types::numeric_info<TypeDescriptor>::min)
+          m_dt = -0.5 * b / a;
+        else {
+
+          float_type t1 = 0.5 * (-b + std::sqrt(sqrt_arg)) / a;
+          float_type t2 = 0.5 * (-b - std::sqrt(sqrt_arg)) / a;
+
+          m_dt = t1 < t2 ? t1 : t2;
+        }
+      }
     }
 
     /// Whether there was a collision given the linear trayectories of the
     /// particles
-    bool has_collision() const { return (m_sqrt_arg >= 0); }
+    bool has_collision() const { return (m_dt < 0); }
 
     /// Calculate the delta-time of a collision
-    float_type dt() const {
-
-      float_type t1 = (-m_b + std::sqrt(m_sqrt_arg)) / (2 * m_a);
-
-      float_type dt = t1 < 0 ? t1 : (-m_b - std::sqrt(m_sqrt_arg)) / (2 * m_a);
-
-      if (dt <= 0)
-        throw std::runtime_error("Unexpected delta-time smaller than zero");
-
-      return dt;
-    }
+    float_type dt() const { return m_dt; }
 
   protected:
-    /// Argument to the square root
-    float_type m_sqrt_arg;
-    /// Second order polynomial parameter "a"
-    float_type m_a;
-    /// Second order polynomial parameter "b"
-    float_type m_b;
+    /// Delta-time to the collision
+    float_type m_dt;
   };
 
   /*!\brief Elastic collisions of particles
@@ -217,10 +221,10 @@ namespace saga::physics::collision {
           continue;
         }
 
-        particles[write_counter++] = std::move(particles[read_counter++]);
+        particles[write_counter++] = particles[read_counter++];
       }
 
-      particles.resize(read_counter);
+      particles.resize(write_counter);
     }
 
     /// Evaluate the collisions among two particles
@@ -257,6 +261,10 @@ namespace saga::physics::collision {
           src.set_py(src.get_py() + tgt.get_py());
           src.set_pz(src.get_pz() + tgt.get_pz());
           src.set_mass(src.get_mass() + tgt.get_mass());
+
+          src.template set<saga::physics::radius>(
+              src.template get<saga::physics::radius>() +
+              tgt.template get<saga::physics::radius>());
 
           // integrate the positions for the time lapse since the collision
           auto t = delta_t + dt; // dt is negative

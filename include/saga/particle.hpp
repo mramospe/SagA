@@ -189,9 +189,18 @@ namespace saga {
         }
         void set_mass(float_type v) {
           auto mass = get_mass();
-          set_px(v * get_px() / mass);
-          set_py(v * get_py() / mass);
-          set_pz(v * get_pz() / mass);
+          set_px(std::abs(get_px()) >
+                         saga::types::numeric_info<TypeDescriptor>::min
+                     ? v * get_px() / mass
+                     : 0.f);
+          set_py(std::abs(get_py()) >
+                         saga::types::numeric_info<TypeDescriptor>::min
+                     ? v * get_py() / mass
+                     : 0.f);
+          set_pz(std::abs(get_pz()) >
+                         saga::types::numeric_info<TypeDescriptor>::min
+                     ? v * get_pz() / mass
+                     : 0.f);
           set_e(std::sqrt(v * v + get_px() * get_px() + get_py() * get_py() +
                           get_pz() * get_pz()));
         }
@@ -316,9 +325,18 @@ namespace saga {
         }
         void set_mass(float_type v) {
           auto mass = get_mass();
-          set_px(v * get_px() / mass);
-          set_py(v * get_py() / mass);
-          set_pz(v * get_pz() / mass);
+          set_px(std::abs(get_px()) >
+                         saga::types::numeric_info<TypeDescriptor>::min
+                     ? v * get_px() / mass
+                     : 0.f);
+          set_py(std::abs(get_py()) >
+                         saga::types::numeric_info<TypeDescriptor>::min
+                     ? v * get_py() / mass
+                     : 0.f);
+          set_pz(std::abs(get_pz()) >
+                         saga::types::numeric_info<TypeDescriptor>::min
+                     ? v * get_pz() / mass
+                     : 0.f);
           set_e(std::sqrt(v * v + get_px() * get_px() + get_py() * get_py() +
                           get_pz() * get_pz()));
         }

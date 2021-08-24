@@ -33,63 +33,69 @@ if __name__ == '__main__':
     if not args.show and not args.save:
         raise RuntimeError('You must tell the script whether you want to show the result, save it or both (via --save/--show)')
 
-    data = np.loadtxt(args.input_file)
-
-    n_particles = data.shape[1] // 3
-
-    logger.info(f'Number of particles: {n_particles}')
-
-    raw_data = pandas.DataFrame(np.zeros((data.shape[0], data.shape[1]), dtype=np.float32), columns=[f'p{i}_{c}' for i in range(n_particles) for c in ('x', 'y', 'z')])
-    raw_data.loc[:,:] = data
-
-    particle_data = [raw_data[[f'p{i}_{c}' for c in ('x', 'y', 'z')]] for i in range(n_particles)]
-
-    for df in particle_data:
-        df.columns = 'x', 'y', 'z'
+    df = pandas.DataFrame.from_records(np.loadtxt(args.input_file, dtype=[(n, np.int32) for n in ('epoch',)] + [(n, np.float32) for n in  ('x', 'y', 'z', 'px', 'py', 'pz', 'size')]))
 
     # PLOT
     fig = plt.figure()
     ax = p3.Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
-    def update(num, data, lines, tracks):
+    def scatter_for_index(ax, data, index):
+
+        global marker_sizes
+
+        df = data[data['epoch'] == index][['x', 'y', 'z', 'size']]
+        x, y, z, size = df['x'], df['y'], df['z'], df['size']
+        if marker_sizes is not None:
+            return ax.scatter(x, y, z, marker='o', s=marker_sizes, color='k')
+        else:
+            return ax.scatter(x, y, z, marker='o', s=size, color='k')
+
+    def update(num, ax, data):
+
+        global lines
+        global tracks
 
         if tracks is not None:
             for d, l in zip(data, tracks):
                 l.set_data(d.values[:num, 0], d.values[:num, 1])
                 l.set_3d_properties(d.values[:num, 2])
 
-        for d, l in zip(data, lines):
-            l.set_data(d.values[num,:2])
-            l.set_3d_properties(d.values[num, 2])
+        lines.remove()
+
+        lines = scatter_for_index(ax, data, num)
+
+    n_initial_points = np.count_nonzero(df['epoch'] == 0)
 
     if args.colors is not None:
-        assert(len(args.colors) == len(particle_data))
+        assert(len(args.colors) == n_initial_points)
         colors = args.colors
     else:
-        colors = len(particle_data) * ['r']
+        colors = n_initial_points * ['k']
+
+    initial = df[df['epoch'] == 0]
 
     if args.marker_sizes is not None:
-        assert(len(args.marker_sizes) == len(particle_data))
+        assert(len(args.marker_sizes) == n_initial_points)
         marker_sizes = args.marker_sizes
     else:
-        marker_sizes = len(particle_data) * [1]
+        marker_sizes = initial['size']
 
     if args.show_tracks:
         logger.info('Tracks of the particles will be shown')
-        tracks = [ax.plot(d['x'][:1], d['y'][:1], d['z'][:1], linestyle='-', linewidth=0.1 * ms, color=c)[0] for d, c, ms in zip(particle_data, colors, marker_sizes)]
+        tracks = [ax.plot(initial['x'], initial['y'], initial['z'], linestyle='-', linewidth=0.1 * ms, color=c)[0] for d, c, ms in zip(df, colors, marker_sizes)]
     else:
         tracks = None
 
-    lines = [ax.plot(d['x'][0], d['y'][0], d['z'][0], marker='o', color=c, markersize=ms)[0] for d, c, ms in zip(particle_data, colors, marker_sizes)]
+    lines = scatter_for_index(ax, df, 0)
 
     # Setting the axes properties
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    mn = raw_data.values.min()
-    mx = raw_data.values.max()
+    mn = df[['x', 'y', 'z']].values.min()
+    mx = df[['x', 'y', 'z']].values.max()
 
     if abs(mn) > abs(mx):
         mn = - 1.1 * abs(mn)
@@ -104,7 +110,7 @@ if __name__ == '__main__':
 
     logger.info('Start animation')
 
-    ani = animation.FuncAnimation(fig, update, len(raw_data), fargs=(particle_data, lines, tracks), interval=14)
+    ani = animation.FuncAnimation(fig, update, np.max(df['epoch']), fargs=(ax, df), interval=14)
 
     if args.save:
         logger.info('Saving animation to an output file')
