@@ -30,14 +30,16 @@ namespace saga {
         7.4259154861063354e-25; // km * Gg^-1
 
     struct earth {
-      static constexpr float_type mass = 5.9722e18; // Gg
+      static constexpr float_type mass = 5.9722e18;     // Gg
+      static constexpr float_type radius = 0.5 * 12756; // km
     };
 
     struct moon {
       static constexpr float_type mass = 0.0123 * earth::mass; // Gg
       static constexpr float_type perigee = 363228.9;          // km
       static constexpr float_type perigee_velocity =
-          1.082 / speed_of_light; // c
+          1.082 / speed_of_light;                      // c
+      static constexpr float_type radius = 0.5 * 3475; // km
     };
 
     /// Convert the given time in seconds to the units of time in this system
@@ -66,28 +68,32 @@ namespace saga {
     static constexpr float_type speed_of_light = 0.299792458; // Gm * s^-1
 
     struct sun {
-      static constexpr float_type mass = 1.; // Mo
+      static constexpr float_type mass = 1.;         // Mo
+      static constexpr float_type radius = 0.696340; // Gm
     };
 
     struct earth {
       static constexpr float_type mass = 3.003e-6 * sun::mass; // Mo
       static constexpr float_type perihelion = 147.10;         // Gm
       static constexpr float_type perihelion_velocity =
-          30.29e-6 / speed_of_light; // c
+          30.29e-6 / speed_of_light;                        // c
+      static constexpr float_type radius = 0.5 * 12.756e-3; // Gm
     };
 
     struct mercury {
       static constexpr float_type mass = 0.0553 * earth::mass; // Mo
       static constexpr float_type perihelion = 46.002;         // Gm
       static constexpr float_type perihelion_velocity =
-          58.98e-6 / speed_of_light; // c
+          58.98e-6 / speed_of_light;                       // c
+      static constexpr float_type radius = 0.5 * 4.879e-3; // Gm
     };
 
     struct venus {
       static constexpr float_type mass = 0.815 * earth::mass; // Mo
       static constexpr float_type perihelion = 107.476;       // Gm
       static constexpr float_type perihelion_velocity =
-          35.26e-6 / speed_of_light; // c
+          35.26e-6 / speed_of_light;                        // c
+      static constexpr float_type radius = 0.5 * 12.104e-3; // Gm
     };
 
     // earth (defined above)
@@ -96,35 +102,40 @@ namespace saga {
       static constexpr float_type mass = 0.107 * earth::mass; // Mo
       static constexpr float_type perihelion = 206.7;         // Gm
       static constexpr float_type perihelion_velocity =
-          26.5e-6 / speed_of_light; // c
+          26.5e-6 / speed_of_light;                        // c
+      static constexpr float_type radius = 0.5 * 6.792e-3; // Gm
     };
 
     struct jupiter {
       static constexpr float_type mass = 317.83 * earth::mass; // Mo
       static constexpr float_type perihelion = 740.522;        // Gm
       static constexpr float_type perihelion_velocity =
-          13.72e-6 / speed_of_light; // c
+          13.72e-6 / speed_of_light;                         // c
+      static constexpr float_type radius = 0.5 * 142.984e-3; // Gm
     };
 
     struct saturn {
       static constexpr float_type mass = 95.16 * earth::mass; // Mo
       static constexpr float_type perihelion = 1352.555;      // Gm
       static constexpr float_type perihelion_velocity =
-          10.18e-6 / speed_of_light; // c
+          10.18e-6 / speed_of_light;                         // c
+      static constexpr float_type radius = 0.5 * 120.356e-3; // Gm
     };
 
     struct uranus {
       static constexpr float_type mass = 14.54 * earth::mass; // Mo
       static constexpr float_type perihelion = 2741.302;      // Gm
       static constexpr float_type perihelion_velocity =
-          7.11e-6 / speed_of_light; // c
+          7.11e-6 / speed_of_light;                         // c
+      static constexpr float_type radius = 0.5 * 51.118e-3; // Gm
     };
 
     struct neptune {
       static constexpr float_type mass = 17.15 * earth::mass; // Mo
       static constexpr float_type perihelion = 4444.449;      // Gm
       static constexpr float_type perihelion_velocity =
-          5.50e-6 / speed_of_light; // c
+          5.50e-6 / speed_of_light;                         // c
+      static constexpr float_type radius = 0.5 * 49.528e-3; // Gm
     };
 
     /// Convert the given distance in meters to the units of time in this system

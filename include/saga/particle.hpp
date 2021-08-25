@@ -187,22 +187,12 @@ namespace saga {
           return std::sqrt(std::abs(get_e() * get_e() - get_px() * get_px() -
                                     get_py() * get_py() - get_pz() * get_pz()));
         }
-        void set_mass(float_type v) {
-          auto mass = get_mass();
-          set_px(std::abs(get_px()) >
-                         saga::types::numeric_info<TypeDescriptor>::min
-                     ? v * get_px() / mass
-                     : 0.f);
-          set_py(std::abs(get_py()) >
-                         saga::types::numeric_info<TypeDescriptor>::min
-                     ? v * get_py() / mass
-                     : 0.f);
-          set_pz(std::abs(get_pz()) >
-                         saga::types::numeric_info<TypeDescriptor>::min
-                     ? v * get_pz() / mass
-                     : 0.f);
-          set_e(std::sqrt(v * v + get_px() * get_px() + get_py() * get_py() +
-                          get_pz() * get_pz()));
+        void set_momenta_and_mass(float_type px, float_type py, float_type pz,
+                                  float_type mass) {
+          set_px(px);
+          set_py(py);
+          set_pz(pz);
+          set_e(std::sqrt(px * px + py * py + pz * pz + mass * mass));
         }
       };
 
@@ -323,22 +313,12 @@ namespace saga {
           return std::sqrt(std::abs(get_e() * get_e() - get_px() * get_px() -
                                     get_py() * get_py() - get_pz() * get_pz()));
         }
-        void set_mass(float_type v) {
-          auto mass = get_mass();
-          set_px(std::abs(get_px()) >
-                         saga::types::numeric_info<TypeDescriptor>::min
-                     ? v * get_px() / mass
-                     : 0.f);
-          set_py(std::abs(get_py()) >
-                         saga::types::numeric_info<TypeDescriptor>::min
-                     ? v * get_py() / mass
-                     : 0.f);
-          set_pz(std::abs(get_pz()) >
-                         saga::types::numeric_info<TypeDescriptor>::min
-                     ? v * get_pz() / mass
-                     : 0.f);
-          set_e(std::sqrt(v * v + get_px() * get_px() + get_py() * get_py() +
-                          get_pz() * get_pz()));
+        void set_momenta_and_mass(float_type px, float_type py, float_type pz,
+                                  float_type mass) {
+          set_px(px);
+          set_py(py);
+          set_pz(pz);
+          set_e(std::sqrt(px * px + py * py + pz * pz + mass * mass));
         }
       };
 

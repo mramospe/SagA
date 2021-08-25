@@ -1,7 +1,6 @@
 #include "dump.hpp"
 #include "saga/all.hpp"
 #include <fstream>
-#include <iostream>
 #include <random>
 
 using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
@@ -13,14 +12,14 @@ int main() {
 
   world.set_collision_handler<saga::physics::collision::simple_merge>();
 
-  auto delta_t = sou::time_from_si(30.f * 24.f * 3600.f);
+  auto delta_t = sou::time_from_si(3600.f);
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      sou::gravitational_constant);
+      sou::gravitational_constant, float{1e-4});
 
   world.configure([&](auto &container) {
-    container.resize(10);
+    container.resize(100);
 
     std::random_device
         rd; // Will be used to obtain a seed for the random number engine
@@ -40,9 +39,9 @@ int main() {
       p.set_px(0.f);
       p.set_py(0.f);
       p.set_pz(0.f);
-      p.set_e(1e-1); // Mo
+      p.set_e(5e-2); // Mo
 
-      p.template set<saga::physics::radius>(1.f); // Gm
+      p.template set<saga::physics::radius>(10.f); // Gm
     }
   });
 
@@ -50,5 +49,5 @@ int main() {
   std::size_t counter = 0;
   world.add_call_back_function(SAGA_DUMP_TO_FILE(file, counter));
 
-  world.run(100 * 12, delta_t);
+  world.run(10000, delta_t);
 }

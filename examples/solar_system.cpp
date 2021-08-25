@@ -19,6 +19,8 @@ void prepare_planet(Particles &container) {
   planet.set_pz(0);
   planet.set_e(Planet::mass + 0.5 * Planet::mass * Planet::perihelion_velocity *
                                   Planet::perihelion_velocity);
+
+  planet.template set<saga::physics::radius>(Planet::radius);
 }
 
 template <class... Planet, class Particles, std::size_t... I>
@@ -43,13 +45,16 @@ void prepare_for_planets(Particles &container) {
   sun.set_pz(0);
   sun.set_e(sou::sun::mass);
 
+  sun.template set<saga::physics::radius>(sou::sun::radius);
+
   prepare_for_planets_impl<Planet...>(
       container, std::make_index_sequence<sizeof...(Planet)>());
 }
 
 int main() {
 
-  saga::world<saga::types::cpu::single_float_precision> world;
+  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
+      world;
 
   auto delta_t = sou::time_from_si(24.f * 3600.f);
 
@@ -64,7 +69,7 @@ int main() {
   });
 
   std::ofstream file{"solar_system.txt"};
-  ;
+
   std::size_t counter = 0;
   world.add_call_back_function(SAGA_DUMP_TO_FILE(file, counter));
 

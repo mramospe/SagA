@@ -59,7 +59,10 @@ namespace saga::physics {
         typename saga::physics::forces<TypeDescriptor>::value_type;
 
     /// Constructor from the field constant
-    central_force_non_relativistic(float_type k) : m_field_constant{k} {}
+    central_force_non_relativistic(
+        float_type k,
+        float_type sf = saga::types::numeric_info<TypeDescriptor>::min)
+        : m_field_constant{k}, m_soften_factor{sf} {}
 
     /// Evaluate the force
     return_type force(float_type tgt_mass, float_type tgt_x, float_type tgt_y,
@@ -72,10 +75,8 @@ namespace saga::physics {
 
       float_type const r2 = dx * dx + dy * dy + dz * dz;
 
-      if (r2 <= saga::types::numeric_info<TypeDescriptor>::min)
-        return {0.f, 0.f, 0.f};
-
-      float_type const tgt_force = m_field_constant * tgt_mass * src_mass / r2;
+      float_type const tgt_force =
+          m_field_constant * tgt_mass * src_mass / (r2 + m_soften_factor);
 
       float_type const r = std::sqrt(r2);
 
@@ -88,6 +89,8 @@ namespace saga::physics {
 
     /// Gravitational constant
     float_type m_field_constant = 0.f;
+    /// Soften factor
+    float_type m_soften_factor;
   };
 
 } // namespace saga::physics

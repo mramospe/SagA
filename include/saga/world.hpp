@@ -166,11 +166,10 @@ namespace saga {
               particle.get_mass(); // whatever we do, we must preserve the mass
 
           // momenta
-          particle.set_px(particle.get_px() + force.get_x() * delta_t);
-          particle.set_py(particle.get_py() + force.get_y() * delta_t);
-          particle.set_pz(particle.get_pz() + force.get_z() * delta_t);
-          // set the mass (and therefore the energy)
-          particle.set_mass(mass);
+          particle.set_momenta_and_mass(
+              particle.get_px() + force.get_x() * delta_t,
+              particle.get_py() + force.get_y() * delta_t,
+              particle.get_pz() + force.get_z() * delta_t, mass);
 
           // integrate the positions
           integrate_position(particle);

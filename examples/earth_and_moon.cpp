@@ -6,7 +6,8 @@ using sou = saga::earth_system<saga::types::cpu::single_float_precision>;
 
 int main() {
 
-  saga::world<saga::types::cpu::single_float_precision> world;
+  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
+      world;
 
   auto delta_t = sou::time_from_si(3600.);
 
@@ -28,6 +29,8 @@ int main() {
     earth.set_pz(0);
     earth.set_e(sou::earth::mass);
 
+    earth.template set<saga::physics::radius>(sou::earth::radius);
+
     auto moon = container[1];
     moon.set_x(sou::moon::perigee);
     moon.set_y(0);
@@ -40,6 +43,8 @@ int main() {
     moon.set_e(sou::moon::mass + 0.5 * sou::moon::mass *
                                      sou::moon::perigee_velocity *
                                      sou::moon::perigee_velocity);
+
+    moon.template set<saga::physics::radius>(sou::moon::radius);
   });
 
   std::ofstream file{"earth_and_moon.txt"};

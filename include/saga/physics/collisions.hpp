@@ -111,64 +111,56 @@ namespace saga::physics::collision {
       collision_time_evaluator<TypeDescriptor> const dce(src, tgt);
 
       // only real numbers represent collisions
-      if (dce.has_collision()) {
+      if (dce.has_collision() && dce.dt() > -delta_t) {
 
-        float_type dt = dce.dt();
+        // positions of the collision
+        src.set_x(src.get_x() + src.get_px() * dce.dt());
+        src.set_y(src.get_y() + src.get_py() * dce.dt());
+        src.set_z(src.get_z() + src.get_pz() * dce.dt());
 
-        if (dt > -delta_t) {
+        tgt.set_x(tgt.get_x() + tgt.get_px() * dce.dt());
+        tgt.set_y(tgt.get_y() + tgt.get_py() * dce.dt());
+        tgt.set_z(tgt.get_z() + tgt.get_pz() * dce.dt());
 
-          // positions of the collision
-          src.set_x(src.get_x() + src.get_px() * dt);
-          src.set_y(src.get_y() + src.get_py() * dt);
-          src.set_z(src.get_z() + src.get_pz() * dt);
+        // we must recalculate the distances, this time at the collision point
+        float_type dx_p = tgt.get_x() - src.get_x();
+        float_type dy_p = tgt.get_y() - src.get_y();
+        float_type dz_p = tgt.get_z() - src.get_z();
 
-          tgt.set_x(tgt.get_x() + tgt.get_px() * dt);
-          tgt.set_y(tgt.get_y() + tgt.get_py() * dt);
-          tgt.set_z(tgt.get_z() + tgt.get_pz() * dt);
+        float_type dpx_p = tgt.get_px() - src.get_px();
+        float_type dpy_p = tgt.get_py() - src.get_py();
+        float_type dpz_p = tgt.get_pz() - src.get_pz();
 
-          // we must recalculate the distances, this time at the collision point
-          float_type dx_p = tgt.get_x() - src.get_x();
-          float_type dy_p = tgt.get_y() - src.get_y();
-          float_type dz_p = tgt.get_z() - src.get_z();
+        float_type mt = 2.f * (dx_p * dpx_p + dy_p * dpy_p + dz_p * dpz_p) /
+                        ((dx_p * dx_p + dy_p * dy_p + dz_p * dz_p) *
+                         (src.get_mass() + tgt.get_mass()));
 
-          float_type dpx_p = tgt.get_px() - src.get_px();
-          float_type dpy_p = tgt.get_py() - src.get_py();
-          float_type dpz_p = tgt.get_pz() - src.get_pz();
+        float_type base_x = mt * dx_p;
+        float_type base_y = mt * dy_p;
+        float_type base_z = mt * dz_p;
 
-          float_type mt = 2.f * (dx_p * dpx_p + dy_p * dpy_p + dz_p * dpz_p) /
-                          ((dx_p * dx_p + dy_p * dy_p + dz_p * dz_p) *
-                           (src.get_mass() + tgt.get_mass()));
+        // momenta
+        auto src_mass = src.get_mass();
+        auto tgt_mass = tgt.get_mass();
 
-          float_type base_x = mt * dx_p;
-          float_type base_y = mt * dy_p;
-          float_type base_z = mt * dz_p;
+        src.set_momenta_and_mass(src.get_px() + base_x * tgt_mass,
+                                 src.get_py() + base_y * tgt_mass,
+                                 src.get_pz() + base_z * tgt_mass, src_mass);
+        tgt.set_momenta_and_mass(tgt.get_px() + base_x * src_mass,
+                                 tgt.get_py() + base_y * src_mass,
+                                 tgt.get_pz() + base_z * src_mass, tgt_mass);
 
-          // momenta
-          auto src_mass = src.get_mass();
-          auto tgt_mass = tgt.get_mass();
+        // integrate the positions for the time lapse since the collision
+        auto integrate_position = [&delta_t, &dce](auto &p) -> void {
+          auto t = delta_t + dce.dt(); // dt is negative
+          p.set_x(p.get_x() + p.get_px() / p.get_mass() * t);
+          p.set_y(p.get_y() + p.get_py() / p.get_mass() * t);
+          p.set_z(p.get_z() + p.get_pz() / p.get_mass() * t);
+          p.set_t(p.get_t() + p.get_e() / p.get_mass() * t);
+        };
 
-          src.set_px(src.get_px() + base_x * tgt_mass);
-          src.set_py(src.get_py() + base_y * tgt_mass);
-          src.set_pz(src.get_pz() + base_z * tgt_mass);
-          src.set_mass(src_mass);
-
-          tgt.set_px(tgt.get_px() + base_x * src_mass);
-          tgt.set_py(tgt.get_py() + base_y * src_mass);
-          tgt.set_pz(tgt.get_pz() + base_z * src_mass);
-          tgt.set_mass(tgt_mass);
-
-          // integrate the positions for the time lapse since the collision
-          auto integrate_position = [&delta_t, &dt](auto &p) -> void {
-            auto t = delta_t + dt; // dt is negative
-            p.set_x(p.get_x() + p.get_px() / p.get_mass() * t);
-            p.set_y(p.get_y() + p.get_py() / p.get_mass() * t);
-            p.set_z(p.get_z() + p.get_pz() / p.get_mass() * t);
-            p.set_t(p.get_t() + p.get_e() / p.get_mass() * t);
-          };
-
-          integrate_position(src);
-          integrate_position(tgt);
-        }
+        integrate_position(src);
+        integrate_position(tgt);
       }
     }
   };
@@ -246,36 +238,39 @@ namespace saga::physics::collision {
       collision_time_evaluator<TypeDescriptor> const dce(src, tgt);
 
       // only real numbers represent collisions
-      if (dce.has_collision()) {
+      if (dce.has_collision() && dce.dt() > -delta_t) {
 
-        float_type dt = dce.dt();
+        auto radius_from_mass = [](auto const &p1, auto const &p2) {
+          return std::pow(float_type{1.f} + p2.get_mass() / p1.get_mass(),
+                          float_type{1.f} / float_type{3.f}) *
+                 p1.template get<saga::physics::radius>();
+        };
 
-        if (dt > -delta_t) {
+        float_type M = src.get_mass() + tgt.get_mass();
+        float_type R = src.get_mass() > tgt.get_mass()
+                           ? radius_from_mass(src, tgt)
+                           : radius_from_mass(tgt, src);
 
-          // positions of the collision
-          src.set_x(0.5 * (src.get_x() + tgt.get_x()));
-          src.set_x(0.5 * (src.get_y() + tgt.get_y()));
-          src.set_x(0.5 * (src.get_z() + tgt.get_z()));
+        // positions of the collision
+        src.set_x(0.5 * (src.get_x() + tgt.get_x()));
+        src.set_x(0.5 * (src.get_y() + tgt.get_y()));
+        src.set_x(0.5 * (src.get_z() + tgt.get_z()));
 
-          src.set_px(src.get_px() + tgt.get_px());
-          src.set_py(src.get_py() + tgt.get_py());
-          src.set_pz(src.get_pz() + tgt.get_pz());
-          src.set_mass(src.get_mass() + tgt.get_mass());
+        src.set_momenta_and_mass(src.get_px() + tgt.get_px(),
+                                 src.get_py() + tgt.get_py(),
+                                 src.get_pz() + tgt.get_pz(), M);
 
-          src.template set<saga::physics::radius>(
-              src.template get<saga::physics::radius>() +
-              tgt.template get<saga::physics::radius>());
+        src.template set<saga::physics::radius>(R);
 
-          // integrate the positions for the time lapse since the collision
-          auto t = delta_t + dt; // dt is negative
-          src.set_x(src.get_x() + src.get_px() / src.get_mass() * t);
-          src.set_y(src.get_y() + src.get_py() / src.get_mass() * t);
-          src.set_z(src.get_z() + src.get_pz() / src.get_mass() * t);
-          src.set_t(src.get_t() + src.get_e() / src.get_mass() * t);
+        // integrate the positions for the time lapse since the collision
+        auto dt = -dce.dt(); // dt is negative
+        src.set_x(src.get_x() + src.get_px() / src.get_mass() * dt);
+        src.set_y(src.get_y() + src.get_py() / src.get_mass() * dt);
+        src.set_z(src.get_z() + src.get_pz() / src.get_mass() * dt);
+        src.set_t(src.get_t() + src.get_e() / src.get_mass() * dt);
 
-          // have merged
-          return merged_status_true;
-        }
+        // have merged
+        return merged_status_true;
       }
       // have not merged
       return merged_status_false;
