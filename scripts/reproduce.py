@@ -19,12 +19,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input_file', type=str, help='Data file to read')
-    parser.add_argument('--colors', nargs='+', type=str, default=None, help='Colors for the particle points')
     parser.add_argument('--marker-sizes', nargs='+', type=int, default=None, help='Marker sizes for the particle points')
-    parser.add_argument('--x-range', nargs=2, type=float, default=None, help='Range in X')
-    parser.add_argument('--y-range', nargs=2, type=float, default=None, help='Range in Y')
-    parser.add_argument('--z-range', nargs=2, type=float, default=None, help='Range in Z')
+    parser.add_argument('--box-view', nargs=2, type=float, default=None, help='Range in X, Y an Z')
+    parser.add_argument('--x-range', nargs=2, type=float, default=None, help='Range in X (incompatible with the --box-view argument)')
+    parser.add_argument('--y-range', nargs=2, type=float, default=None, help='Range in Y (incompatible with the --box-view argument)')
+    parser.add_argument('--z-range', nargs=2, type=float, default=None, help='Range in Z (incompatible with the --box-view argument)')
     parser.add_argument('--show-tracks', action='store_true', help='Whether to show a faint line with the track followed by the particles')
+    parser.add_argument('--track-size', type=float, default=5e-3, help='Size of the tracks')
+    parser.add_argument('--figure-size', nargs=2, default=(10, 10), help='Size of the figure')
     parser.add_argument('--save', type=str, default=None, help='Name of the output file in which the animation will be saved as a GIF. Either --show or --save must be provided.')
     parser.add_argument('--show', action='store_true', help='Whether to show the animation. Either --show or --save must be provided.')
 
@@ -33,23 +35,30 @@ if __name__ == '__main__':
     if not args.show and not args.save:
         raise RuntimeError('You must tell the script whether you want to show the result, save it or both (via --save/--show)')
 
-    df = pandas.DataFrame.from_records(np.loadtxt(args.input_file, dtype=[(n, np.int32) for n in ('epoch',)] + [(n, np.float32) for n in  ('x', 'y', 'z', 'px', 'py', 'pz', 'size')]))
+    df = pandas.DataFrame.from_records(np.loadtxt(args.input_file, dtype=[(n, np.int32) for n in ('epoch',)] + [(n, np.float32) for n in  ('x', 'y', 'z', 'px', 'py', 'pz', 'radius')]))
 
     # PLOT
-    fig = plt.figure()
+    fig = plt.figure(figsize=args.figure_size)
     ax = p3.Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
+    normalized_sizes = lambda radius: (radius / np.min(radius))**2
+
     def scatter_for_index(ax, data, index):
 
-        global marker_sizes
-
-        df = data[data['epoch'] == index][['x', 'y', 'z', 'size']]
-        x, y, z, size = df['x'], df['y'], df['z'], df['size']
-        if marker_sizes is not None:
-            return ax.scatter(x, y, z, marker='o', s=marker_sizes, color='k')
+        if args.marker_sizes is not None:
+            df = data[['x', 'y', 'z']][data['epoch'] == index]
+            x, y, z = df['x'], df['y'], df['z']
+            return ax.scatter(x, y, z, marker='o', s=args.marker_sizes, color='k')
         else:
-            return ax.scatter(x, y, z, marker='o', s=size, color='k')
+            df = data[['x', 'y', 'z', 'radius']][data['epoch'] == index]
+            x, y, z, radius = df['x'], df['y'], df['z'], df['radius']
+            return ax.scatter(x, y, z, marker='o', s=normalized_sizes(radius), color='k')
+
+    def tracks_for_index(ax, data, index):
+        df = data[['x', 'y', 'z']][data['epoch'] <= index]
+        x, y, z = df['x'], df['y'], df['z']
+        return ax.scatter(x, y, z, marker='.', s=args.track_size, color='k')
 
     def update(num, ax, data):
 
@@ -57,33 +66,22 @@ if __name__ == '__main__':
         global tracks
 
         if tracks is not None:
-            for d, l in zip(data, tracks):
-                l.set_data(d.values[:num, 0], d.values[:num, 1])
-                l.set_3d_properties(d.values[:num, 2])
+            tracks.remove()
+            tracks = tracks_for_index(ax, data, num)
 
         lines.remove()
-
         lines = scatter_for_index(ax, data, num)
 
     n_initial_points = np.count_nonzero(df['epoch'] == 0)
-
-    if args.colors is not None:
-        assert(len(args.colors) == n_initial_points)
-        colors = args.colors
-    else:
-        colors = n_initial_points * ['k']
 
     initial = df[df['epoch'] == 0]
 
     if args.marker_sizes is not None:
         assert(len(args.marker_sizes) == n_initial_points)
-        marker_sizes = args.marker_sizes
-    else:
-        marker_sizes = initial['size']
 
     if args.show_tracks:
         logger.info('Tracks of the particles will be shown')
-        tracks = [ax.plot(initial['x'], initial['y'], initial['z'], linestyle='-', linewidth=0.1 * ms, color=c)[0] for d, c, ms in zip(df, colors, marker_sizes)]
+        tracks = tracks_for_index(ax, df, 0)
     else:
         tracks = None
 
@@ -104,9 +102,12 @@ if __name__ == '__main__':
         mn = - 1.1 * abs(mx)
         mx = + 1.1 * abs(mx)
 
-    ax.set_xlim3d(args.x_range or (mn, mx))
-    ax.set_ylim3d(args.y_range or (mn, mx))
-    ax.set_zlim3d(args.z_range or (mn, mx))
+    if any((args.x_range, args.y_range, args.z_range)) and args.box_view:
+        raise ValueError('Can not specify a range view in X, Y and/or Z and --box-view at the same time')
+
+    ax.set_xlim3d(args.x_range or (args.box_view or (mn, mx)))
+    ax.set_ylim3d(args.y_range or (args.box_view or (mn, mx)))
+    ax.set_zlim3d(args.z_range or (args.box_view or (mn, mx)))
 
     logger.info('Start animation')
 
