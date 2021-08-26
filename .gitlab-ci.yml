@@ -33,6 +33,7 @@ examples:
    script:
       - ./build/examples/earth_and_moon
       - ./build/examples/solar_system
+      - ./build/examples/star_formation
    needs:
       - job: build
         artifacts: true

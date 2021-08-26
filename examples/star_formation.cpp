@@ -3,6 +3,7 @@
 #include <fstream>
 #include <random>
 
+using prec = saga::types::cpu::single_float_precision;
 using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
 
 int main() {
@@ -16,7 +17,8 @@ int main() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      sou::gravitational_constant, float{1e-4});
+      saga::physics::field_constant<prec>{sou::gravitational_constant},
+      saga::physics::soften_factor<prec>{float{1e-4}});
 
   world.configure([&](auto &container) {
     container.resize(100);

@@ -60,7 +60,8 @@ int main() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      sou::gravitational_constant);
+      saga::physics::field_constant<saga::types::cpu::single_float_precision>{
+          sou::gravitational_constant});
 
   world.configure([&](auto &container) {
     prepare_for_planets<sou::mercury, sou::venus, sou::earth, sou::mars,

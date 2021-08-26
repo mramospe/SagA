@@ -5,6 +5,27 @@ using simple_container =
     saga::core::container_with_fields<saga::types::cpu::single_float_precision,
                                       saga::property::x, saga::property::y>;
 
+saga::test::errors test_utils() {
+
+  saga::test::errors errors;
+
+  if (saga::core::has_type_v<double, int, float>)
+    errors.emplace_back("Failed to check type (false positive)");
+
+  if (!saga::core::has_type_v<double, int, double>)
+    errors.emplace_back("Failed to check type (false negative)");
+
+  if (saga::core::has_repeated_template_arguments_v<double, int, float>)
+    errors.emplace_back(
+        "Failed to process repeated template arguments (false positive)");
+
+  if (!saga::core::has_repeated_template_arguments_v<double, float, double>)
+    errors.emplace_back(
+        "Failed to process repeated template arguments (false negative)");
+
+  return errors;
+}
+
 saga::test::errors test_container() {
 
   auto errors = saga::test::test_container<simple_container>();
@@ -93,5 +114,11 @@ int main() {
   SAGA_TEST_UTILS_ADD_TEST(container_collector, test_proxy);
   SAGA_TEST_UTILS_ADD_TEST(container_collector, test_value);
 
-  return !container_collector.run();
+  saga::test::collector utils_collector("utils");
+  SAGA_TEST_UTILS_ADD_TEST(utils_collector, test_utils);
+
+  auto utils_status = !utils_collector.run();
+  auto container_status = !container_collector.run();
+
+  return utils_status && container_status;
 }

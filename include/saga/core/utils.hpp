@@ -63,6 +63,36 @@ namespace saga::core {
     using tpl = typename template_at<I - 1, T...>::template tpl<V>;
   };
 
+  /// Whether the type is in the given list
+  template <class Reference, class... T> struct has_type : std::false_type {};
+
+  /// Whether the type is in the given list
+  template <class Reference, class... T>
+  struct has_type<Reference, Reference, T...> : std::true_type {};
+
+  /// Whether the type is in the given list
+  template <class Reference, class T0, class... T>
+  struct has_type<Reference, T0, T...> : has_type<Reference, T...> {};
+
+  /// Whether the type is in the given list
+  template <class Reference, class... T>
+  static constexpr auto has_type_v = has_type<Reference, T...>::value;
+
+  /// Check if a list of template arguments has repeated types
+  template <class... T>
+  struct has_repeated_template_arguments : std::false_type {};
+
+  /// Check if a list of template arguments has repeated types
+  template <class T0, class... T>
+  struct has_repeated_template_arguments<T0, T...>
+      : std::conditional_t<has_type_v<T0, T...>, std::true_type,
+                           has_repeated_template_arguments<T...>> {};
+
+  /// Check if a list of template arguments has repeated types
+  template <class... T>
+  static constexpr auto has_repeated_template_arguments_v =
+      has_repeated_template_arguments<T...>::value;
+
   /// Get the template argument at the given position
   template <template <class> class T0, template <class> class... T>
   struct template_at<0, T0, T...> {
@@ -94,4 +124,15 @@ namespace saga::core {
   /// arguments
   template <template <class> class Ref, template <class> class... T>
   static constexpr auto is_template_in_v = is_template_in<Ref, T...>::value;
+
+  /// Get the value at the given position
+  template <std::size_t I, class T0, class... T>
+  auto value_at(T0 const &v0, T const &... v) {
+    static_assert(I < 1 + sizeof...(T));
+    if constexpr (I == 0)
+      return v0;
+    else
+      return value_at<I - 1>(v...);
+  }
+
 } // namespace saga::core
