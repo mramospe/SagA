@@ -31,6 +31,7 @@ namespace saga {
 
   template <class TypeDescriptor> struct numeric_info;
 
+  /// Numerical information for \ref saga::cpu::single_float_precision
   template <> struct numeric_info<cpu::single_float_precision> {
     static constexpr auto min = std::numeric_limits<
         typename cpu::single_float_precision::float_type>::min();
@@ -40,6 +41,7 @@ namespace saga {
         typename cpu::single_float_precision::float_type>::max();
   };
 
+  /// Numerical information for \ref saga::cpu::double_float_precision
   template <> struct numeric_info<cpu::double_float_precision> {
     static constexpr auto min = std::numeric_limits<
         typename cpu::double_float_precision::float_type>::min();
@@ -48,33 +50,26 @@ namespace saga {
     static constexpr auto max = std::numeric_limits<
         typename cpu::double_float_precision::float_type>::max();
   };
+
+  namespace core {
+
+    /// Check if the input type is a valid type descriptor
+    template <class T> struct is_valid_type_descriptor : std::false_type {};
+
+    /// Check if the input type is a valid type descriptor
+    template <>
+    struct is_valid_type_descriptor<cpu::single_float_precision>
+        : std::true_type {};
+
+    /// Check if the input type is a valid type descriptor
+    template <>
+    struct is_valid_type_descriptor<cpu::double_float_precision>
+        : std::true_type {};
+
+    /// Check if the input type is a valid type descriptor
+    template <class T>
+    static constexpr auto is_valid_type_descriptor_v =
+        is_valid_type_descriptor<T>::value;
+
+  } // namespace core
 } // namespace saga
-
-namespace saga::core {
-
-  template <class T> struct is_valid_type_descriptor : std::false_type {};
-
-  template <>
-  struct is_valid_type_descriptor<cpu::single_float_precision>
-      : std::true_type {};
-
-  template <>
-  struct is_valid_type_descriptor<cpu::double_float_precision>
-      : std::true_type {};
-
-  template <class T>
-  static constexpr auto is_valid_type_descriptor_v =
-      is_valid_type_descriptor<T>::value;
-
-  template <class TypeDescriptor, class T>
-  struct is_type_descriptor_type
-      : std::conditional_t<
-            (std::is_same_v<T, typename TypeDescriptor::float_type> ||
-             std::is_same_v<T, typename TypeDescriptor::int_type>),
-            std::true_type, std::false_type> {};
-
-  template <class TypeDescriptor, class T>
-  static constexpr auto is_type_descriptor_type_v =
-      is_type_descriptor_type<TypeDescriptor, T>::value;
-
-} // namespace saga::core
