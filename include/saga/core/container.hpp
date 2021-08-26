@@ -21,7 +21,8 @@ namespace saga::core {
     static_assert(sizeof...(Field) > 0,
                   "Containers without fields make no sense");
 
-    static_assert(saga::core::is_valid_type_descriptor_v<TypeDescriptor>);
+    static_assert(saga::core::is_valid_type_descriptor_v<TypeDescriptor>,
+                  "File descriptor is not valid");
 
   public:
     using base_type = std::tuple<saga::core::container_t<
@@ -59,7 +60,9 @@ namespace saga::core {
 
     // forward declarations
     class value_type;
+    class iterator_type;
     class proxy_type;
+    class const_iterator_type;
     class const_proxy_type;
 
     /* \brief A container value type
@@ -134,11 +137,14 @@ namespace saga::core {
       using container_type = container_with_fields;
 
       /// Build the proxy from the container and the index
-      proxy_type(container_type &cont, std::size_t idx)
-          : m_ptr{&cont}, m_idx{idx} {}
-      proxy_type(const proxy_type &other)
-          : m_ptr{other.m_ptr}, m_idx{other.m_idx} {}
-      proxy_type(proxy_type &&other) : m_ptr{other.m_ptr}, m_idx{other.m_idx} {}
+      proxy_type(container_type *cont, std::size_t idx)
+          : m_ptr{cont}, m_idx{idx} {}
+      /// The copy constructor assigns the internal container and index from the
+      /// argument
+      proxy_type(const proxy_type &) = default;
+      /// The move constructor assigns the internal container and index from the
+      /// argument
+      proxy_type(proxy_type &&) = default;
 
       proxy_type &operator=(proxy_type const &other) {
 
@@ -146,6 +152,17 @@ namespace saga::core {
         return *this;
       }
       proxy_type &operator=(proxy_type &&other) {
+
+        (set<Field>(other.template get<Field>()), ...);
+        return *this;
+      }
+
+      proxy_type &operator=(const_proxy_type const &other) {
+
+        (set<Field>(other.template get<Field>()), ...);
+        return *this;
+      }
+      proxy_type &operator=(const_proxy_type &&other) {
 
         (set<Field>(other.template get<Field>()), ...);
         return *this;
@@ -172,40 +189,6 @@ namespace saga::core {
         m_ptr->template set<F>(m_idx, v);
       }
 
-      /// Pointer to the container
-      container_type const *container_ptr() const { return m_ptr; }
-      /// Container passed as a reference
-      container_type &container() const { return *m_ptr; }
-      /// Current index this proxy points to
-      std::size_t index() const { return m_idx; }
-      /// To allow STL-like operations
-      proxy_type &operator*() { return *this; }
-      /// To allow STL-like operations
-      proxy_type const &operator*() const { return *this; }
-      /// Increment the index
-      proxy_type &operator++() {
-        ++m_idx;
-        return *this;
-      }
-      /// Increment the index
-      proxy_type operator++(int) {
-
-        auto copy = *this;
-        ++(*this);
-        return copy;
-      }
-      /// Decrement the index
-      proxy_type &operator--() {
-        --m_idx;
-        return *this;
-      }
-      /// Decrement the index
-      proxy_type operator--(int) {
-
-        auto copy = *this;
-        --(*this);
-        return copy;
-      }
       /// Whether this class has the specified property
       template <template <class> class Property> constexpr bool has() const {
         return saga::core::is_template_in_v<Property, Field...>;
@@ -220,6 +203,113 @@ namespace saga::core {
       }
 
     protected:
+      /// Pointer to the container
+      container_type *container_ptr() { return m_ptr; }
+      /// Container as a reference
+      container_type &container() { return *m_ptr; }
+      /// Container as a reference
+      container_type const &container() const { return *m_ptr; }
+      /// Current index this proxy points to
+      std::size_t index() const { return m_idx; }
+
+      /// Pointer to the container
+      container_type *m_ptr = nullptr;
+      /// Index in the container
+      std::size_t m_idx = 0;
+    };
+
+    /* \brief A container proxy type
+       This object is returned by containers when accessing a single element
+     */
+    class iterator_type {
+
+    public:
+      /// Container type
+      using container_type = container_with_fields;
+
+      friend class const_iterator_type;
+
+      /// Build the iterator from the container and the index
+      iterator_type(container_type *cont, std::size_t idx)
+          : m_ptr{cont}, m_idx{idx} {}
+      iterator_type(const iterator_type &other) = default;
+      iterator_type(iterator_type &&other) = default;
+      iterator_type &operator=(iterator_type const &) = default;
+      iterator_type &operator=(iterator_type &&) = default;
+
+      /// To allow STL-like operations
+      proxy_type operator*() { return proxy_type{m_ptr, m_idx}; }
+      /// To allow STL-like operations
+      const_proxy_type operator*() const { return proxy_type{m_ptr, m_idx}; }
+      /// Increment the index
+      iterator_type &operator++() {
+        ++m_idx;
+        return *this;
+      }
+      /// Increment the index
+      iterator_type operator++(int) {
+
+        auto copy = *this;
+        ++(*this);
+        return copy;
+      }
+      /// Decrement the index
+      iterator_type &operator--() {
+        --m_idx;
+        return *this;
+      }
+      /// Decrement the index
+      iterator_type operator--(int) {
+
+        auto copy = *this;
+        --(*this);
+        return copy;
+      }
+      /// Move the internal index a certain quantity forward
+      iterator_type &operator+=(int i) {
+        m_idx += i;
+        return *this;
+      }
+      /// Move the internal index a certain quantity backward
+      iterator_type operator-=(int i) {
+        m_idx -= i;
+        return *this;
+      }
+      /// Return a copy of the iterator with the index modified by the given
+      /// offset
+      iterator_type operator+(int i) {
+        auto copy = *this;
+        copy += i;
+        return copy;
+      }
+      /// Return a copy of the iterator with the index modified by the given
+      /// offset
+      iterator_type operator-(int i) {
+        auto copy = *this;
+        copy -= i;
+        return copy;
+      }
+      /// Comparison operator of two proxies
+      bool operator==(iterator_type const &s) {
+        return (container_ptr() == s.container_ptr()) && (index() == s.index());
+      }
+      /// Comparison operator of two proxies with different cv qualifiers
+      bool operator==(const_iterator_type const &s) {
+        return (container_ptr() == s.container_ptr()) && (index() == s.index());
+      }
+      /// Comparison operator of two proxies
+      bool operator!=(iterator_type const &s) { return !(*this == s); }
+      /// Comparison operator of two proxies with different cv qualifiers
+      bool operator!=(const_iterator_type const &s) { return !(*this == s); }
+
+    protected:
+      /// Pointer to the container
+      container_type *container_ptr() const { return m_ptr; }
+      /// Container as a reference
+      container_type const &container() const { return *m_ptr; }
+      /// Current index this proxy points to
+      std::size_t index() const { return m_idx; }
+
       /// Pointer to the container
       container_type *m_ptr = nullptr;
       /// Index in the container
@@ -236,47 +326,15 @@ namespace saga::core {
       using container_type = container_with_fields;
 
       /// Build the proxy from the container and the index
-      const_proxy_type(container_type const &cont, std::size_t idx)
-          : m_ptr{&cont}, m_idx{idx} {}
-      const_proxy_type(const const_proxy_type &other)
-          : m_ptr{other.m_ptr}, m_idx{other.m_idx} {}
-      const_proxy_type(const_proxy_type &&other)
-          : m_ptr{other.m_ptr}, m_idx{other.m_idx} {}
+      const_proxy_type(container_type const *cont, std::size_t idx)
+          : m_ptr{cont}, m_idx{idx} {}
+      /// The copy constructor assigns the internal container and index from the
+      /// argument
+      const_proxy_type(const const_proxy_type &) = default;
+      /// The move constructor assigns the internal container and index from the
+      /// argument
+      const_proxy_type(const_proxy_type &&) = default;
 
-      /// Pointer to the container
-      container_type const *container_ptr() const { return m_ptr; }
-      /// Container as a reference
-      container_type const &container() const { return *m_ptr; }
-      /// Current index this proxy points to
-      std::size_t index() const { return m_idx; }
-      /// For compatibility with STL-like syntax
-      const_proxy_type &operator*() { return *this; }
-      /// For compatibility with STL-like syntax
-      const_proxy_type &operator*() const { return *this; }
-      /// Increment the index
-      const_proxy_type &operator++() {
-        ++m_idx;
-        return *this;
-      }
-      /// Increment the index
-      const_proxy_type operator++(int) {
-
-        auto copy = *this;
-        ++(*this);
-        return copy;
-      }
-      /// Decrement the index
-      const_proxy_type &operator--() {
-        --m_idx;
-        return *this;
-      }
-      /// Decrement the index
-      const_proxy_type operator--(int) {
-
-        auto copy = *this;
-        --(*this);
-        return copy;
-      }
       /// Whether this class has the specified property
       template <template <class> class Property> constexpr bool has() const {
         return saga::core::is_template_in_v<Property, Field...>;
@@ -288,57 +346,127 @@ namespace saga::core {
 
     protected:
       /// Pointer to the container
+      container_type const *container_ptr() const { return m_ptr; }
+      /// Container as a reference
+      container_type const &container() const { return *m_ptr; }
+      /// Current index this proxy points to
+      std::size_t index() const { return m_idx; }
+
+      /// Pointer to the container
       container_type const *m_ptr = nullptr;
       /// Index in the container
       std::size_t m_idx = 0;
     };
 
-    /// Comparison operator of two proxies
-    friend bool operator==(proxy_type const &f, proxy_type const &s) {
-      return (f.container_ptr() == s.container_ptr()) &&
-             (f.index() == s.index());
-    }
-    /// Comparison operator of two proxies to constant containers
-    friend bool operator==(const_proxy_type const &f,
-                           const_proxy_type const &s) {
-      return (f.container_ptr() == s.container_ptr()) &&
-             (f.index() == s.index());
-    }
-    /// Comparison operator of two proxies with different cv qualifiers
-    friend bool operator==(const_proxy_type const &f, proxy_type const &s) {
-      return (f.container_ptr() == s.container_ptr()) &&
-             (f.index() == s.index());
-    }
-    /// Comparison operator of two proxies with different cv qualifiers
-    friend bool operator==(proxy_type const &f, const_proxy_type const &s) {
-      return (f.container_ptr() == s.container_ptr()) &&
-             (f.index() == s.index());
-    }
-    /// Comparison operator of two proxies
-    friend bool operator!=(proxy_type const &f, proxy_type const &s) {
-      return !(f == s);
-    }
-    /// Comparison operator of two proxies to constant containers
-    friend bool operator!=(const_proxy_type const &f,
-                           const_proxy_type const &s) {
-      return !(f == s);
-    }
-    /// Comparison operator of two proxies with different cv qualifiers
-    friend bool operator!=(const_proxy_type const &f, proxy_type const &s) {
-      return !(f == s);
-    }
-    /// Comparison operator of two proxies with different cv qualifiers
-    friend bool operator!=(proxy_type const &f, const_proxy_type const &s) {
-      return !(f == s);
-    }
+    /* \brief A container proxy type
+       This object is returned by containers when accessing a single element
+     */
+    class const_iterator_type {
+
+    public:
+      /// Container type
+      using container_type = container_with_fields;
+
+      friend class iterator_type;
+
+      /// Build the proxy from the container and the index
+      const_iterator_type(container_type const *cont, std::size_t idx)
+          : m_ptr{cont}, m_idx{idx} {}
+      const_iterator_type(const const_iterator_type &) = default;
+      const_iterator_type(const_iterator_type &&) = default;
+      const_iterator_type &operator=(const_iterator_type const &) = default;
+      const_iterator_type &operator=(const_iterator_type &&) = default;
+
+      /// For compatibility with STL-like syntax
+      const_proxy_type operator*() { return const_proxy_type{m_ptr, m_idx}; }
+      /// For compatibility with STL-like syntax
+      const_proxy_type operator*() const {
+        return const_proxy_type{m_ptr, m_idx};
+      }
+      /// Increment the index
+      const_iterator_type &operator++() {
+        ++m_idx;
+        return *this;
+      }
+      /// Increment the index
+      const_iterator_type operator++(int) {
+
+        auto copy = *this;
+        ++(*this);
+        return copy;
+      }
+      /// Decrement the index
+      const_iterator_type &operator--() {
+        --m_idx;
+        return *this;
+      }
+      /// Decrement the index
+      const_iterator_type operator--(int) {
+
+        auto copy = *this;
+        --(*this);
+        return copy;
+      }
+      /// Move the internal index a certain quantity forward
+      const_iterator_type &operator+=(int i) {
+        m_idx += i;
+        return *this;
+      }
+      /// Move the internal index a certain quantity backward
+      const_iterator_type operator-=(int i) {
+        m_idx -= i;
+        return *this;
+      }
+      /// Return a copy of the iterator with the index modified by the given
+      /// offset
+      const_iterator_type operator+(int i) {
+        auto copy = *this;
+        copy += i;
+        return copy;
+      }
+      /// Return a copy of the iterator with the index modified by the given
+      /// offset
+      const_iterator_type operator-(int i) {
+        auto copy = *this;
+        copy -= i;
+        return copy;
+      }
+
+      /// Comparison operator of two proxies to constant containers
+      bool operator==(const_iterator_type const &s) {
+        return (container_ptr() == s.container_ptr()) && (index() == s.index());
+      }
+      /// Comparison operator of two proxies with different cv qualifiers
+      bool operator==(iterator_type const &s) {
+        return (container_ptr() == s.container_ptr()) && (index() == s.index());
+      }
+
+      /// Comparison operator of two proxies to constant containers
+      bool operator!=(const_iterator_type const &s) { return !(*this == s); }
+      /// Comparison operator of two proxies with different cv qualifiers
+      bool operator!=(iterator_type const &s) { return !(*this == s); }
+
+    protected:
+      /// Pointer to the container
+      container_type const *container_ptr() const { return m_ptr; }
+      /// Container as a reference
+      container_type const &container() const { return *m_ptr; }
+      /// Current index this proxy points to
+      std::size_t index() const { return m_idx; }
+
+      /// Pointer to the container
+      container_type const *m_ptr = nullptr;
+      /// Index in the container
+      std::size_t m_idx = 0;
+    };
 
     /// Access an element of the container
-    auto operator[](std::size_t idx) { return proxy_type(*this, idx); }
+    auto operator[](std::size_t idx) { return proxy_type(this, idx); }
 
     /// Access an element of the container
     auto operator[](std::size_t idx) const {
 
-      return const_proxy_type(*this, idx);
+      return const_proxy_type(this, idx);
     }
 
     /// Get the container associated to the given field
@@ -369,22 +497,22 @@ namespace saga::core {
     }
 
     /// Begining of the container
-    auto begin() { return proxy_type(*this, 0); }
+    auto begin() { return iterator_type(this, 0); }
 
     /// Begining of the container
-    auto begin() const { return const_proxy_type(*this, 0); }
+    auto begin() const { return const_iterator_type(this, 0); }
 
     /// Begining of the container
-    auto cbegin() const { return const_proxy_type(*this, 0); }
+    auto cbegin() const { return const_iterator_type(this, 0); }
 
     /// End of the container
-    auto end() { return proxy_type(*this, this->size()); }
+    auto end() { return iterator_type(this, this->size()); }
 
     /// End of the container
-    auto end() const { return const_proxy_type(*this, this->size()); }
+    auto end() const { return const_iterator_type(this, this->size()); }
 
     /// End of the container
-    auto cend() const { return const_proxy_type(*this, this->size()); }
+    auto cend() const { return const_iterator_type(this, this->size()); }
 
     /// Add a new element to the container
     void push_back(value_type const &el) {

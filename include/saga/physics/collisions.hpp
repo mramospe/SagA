@@ -246,7 +246,6 @@ namespace saga::physics::collision {
                  p1.template get<saga::physics::radius>();
         };
 
-        float_type M = src.get_mass() + tgt.get_mass();
         float_type R = src.get_mass() > tgt.get_mass()
                            ? radius_from_mass(src, tgt)
                            : radius_from_mass(tgt, src);
@@ -256,9 +255,10 @@ namespace saga::physics::collision {
         src.set_x(0.5 * (src.get_y() + tgt.get_y()));
         src.set_x(0.5 * (src.get_z() + tgt.get_z()));
 
-        src.set_momenta_and_mass(src.get_px() + tgt.get_px(),
-                                 src.get_py() + tgt.get_py(),
-                                 src.get_pz() + tgt.get_pz(), M);
+        src.set_px(src.get_px() + tgt.get_px());
+        src.set_py(src.get_py() + tgt.get_py());
+        src.set_pz(src.get_pz() + tgt.get_pz());
+        src.set_e(src.get_e() + tgt.get_e());
 
         src.template set<saga::physics::radius>(R);
 

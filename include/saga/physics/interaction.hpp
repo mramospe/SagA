@@ -108,11 +108,11 @@ namespace saga::physics {
       float_type const dy = src_y - tgt_y;
       float_type const dz = src_z - tgt_z;
 
-      float_type const r2 = dx * dx + dy * dy + dz * dz;
+      float_type const r2 =
+          dx * dx + dy * dy + dz * dz + this->template get<soften_factor>();
 
-      float_type const tgt_force = this->template get<field_constant>() *
-                                   tgt_mass * src_mass /
-                                   (r2 + this->template get<soften_factor>());
+      float_type const tgt_force =
+          this->template get<field_constant>() * tgt_mass * src_mass / r2;
 
       float_type const r = std::sqrt(r2);
 

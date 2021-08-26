@@ -128,7 +128,7 @@ namespace saga::core {
   /// Get the value at the given position
   template <std::size_t I, class T0, class... T>
   auto value_at(T0 const &v0, T const &... v) {
-    static_assert(I < 1 + sizeof...(T));
+    static_assert(I < 1 + sizeof...(T), "Template index is out of range");
     if constexpr (I == 0)
       return v0;
     else

@@ -107,19 +107,18 @@ namespace saga::test {
 
     Container container(10);
 
-    auto proxy_0 = container[0];
-    auto proxy_1 = container[1];
+    auto proxy_0 = container.begin();
+    auto proxy_1 = container.begin() + 1;
 
     proxy_0 = proxy_1;
-    if (proxy_0.index() == proxy_1.index())
-      errors.emplace_back(
-          "Assigning a proxy to another is setting the indices");
+    if (proxy_0 == proxy_1)
+      errors.emplace_back("Assigning a proxy to another is not done correctly");
 
     auto cproxy_1 = container.cbegin();
     auto cproxy_0 = cproxy_1++;
-    if (cproxy_0.index() == cproxy_1.index())
+    if (cproxy_0 == cproxy_1)
       errors.emplace_back(
-          "Assigning a constant proxy to another is setting the indices");
+          "Assigning a constant proxy to another is not done correctly");
 
     if (container.begin() == container.end())
       errors.emplace_back(
@@ -147,7 +146,7 @@ namespace saga::test {
 
     proxy = value;
     value = container[1];
-    value = container.cbegin();
+    value = *(container.cbegin());
 
     return errors;
   }

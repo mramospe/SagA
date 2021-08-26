@@ -59,27 +59,23 @@ saga::test::errors test_proxy() {
 
   simple_container container(10);
 
-  auto p1 = container[0];
-  p1.get<saga::property::x>();
+  auto p1 = container.begin();
+  (*p1).get<saga::property::x>();
 
   auto p2 = p1;
-  if (p1.index() != p2.index())
+  if (p1 != p2)
     errors.emplace_back("Unable to construct proxy from assignment properly");
 
   ++p1;
   p2 = p1;
-  if (p1.index() == p2.index())
+  if (p1 != p2)
     errors.emplace_back(
-        "Assignment without construction must leave the index untouched");
+        "Assignment of iterators must evaluate to the same object");
 
-  auto idx = p1.index();
-  if ((++p1).index() == idx)
-    errors.emplace_back("Increment operator does not modify the index");
-
-  if ((++container[0]).index() != container[1].index())
+  if ((++container.begin()) != (container.begin() + 1))
     errors.emplace_back("Error in proxy increment operator");
 
-  if ((container[0]++).index() != container[0].index())
+  if ((container.begin()++) != container.begin())
     errors.emplace_back("Error in proxy increment operator (copy)");
 
   if (container.begin() == container.end())
@@ -117,8 +113,8 @@ int main() {
   saga::test::collector utils_collector("utils");
   SAGA_TEST_UTILS_ADD_TEST(utils_collector, test_utils);
 
-  auto utils_status = !utils_collector.run();
-  auto container_status = !container_collector.run();
+  auto utils_status = utils_collector.run();
+  auto container_status = container_collector.run();
 
-  return utils_status && container_status;
+  return !utils_status && !container_status;
 }
