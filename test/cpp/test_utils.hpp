@@ -3,9 +3,6 @@
 #include <fstream>
 #include <string>
 
-#ifndef REACTIONS_TEST_UTILS_HPP
-#define REACTIONS_TEST_UTILS_HPP
-
 #include <functional>
 #include <iostream>
 #include <map>
@@ -161,5 +158,3 @@ namespace saga::test {
   catch (...) {                                                                \
     errors.push_back("Unknown error detected");                                \
   }
-
-#endif // SAGA_TEST_UTILS_HPP
