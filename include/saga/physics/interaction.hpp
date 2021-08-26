@@ -86,13 +86,6 @@ namespace saga::physics {
     central_force_non_relativistic &
     operator=(central_force_non_relativistic &&) = default;
 
-    /// Base class
-    using base_type = saga::physics::interaction<
-        TypeDescriptor, Charge,
-        typename saga::physics::forces<TypeDescriptor>::value_type, property::x,
-        property::y, property::z, property::px, property::py, property::pz,
-        property::e>;
-
     /// Floating-point type
     using float_type = typename TypeDescriptor::float_type;
     /// Value returned by the functor

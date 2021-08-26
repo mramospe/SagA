@@ -197,6 +197,8 @@ namespace saga::physics::collision {
 
           auto pj = particles[j];
 
+          // if delta_t is too big, we might miss situations where several
+          // particles collide at the same time
           if ((invalid[j] =
                    this->merge_if_close_and_return_status(delta_t, pi, pj)))
             break;
@@ -240,20 +242,32 @@ namespace saga::physics::collision {
       // only real numbers represent collisions
       if (dce.has_collision() && dce.dt() > -delta_t) {
 
-        auto radius_from_mass = [](auto const &p1, auto const &p2) {
-          return std::pow(float_type{1.f} + p2.get_mass() / p1.get_mass(),
+        auto radius_from_mass = [](auto const &p1_radius, auto const &p1_mass,
+                                   auto const &p2_mass) {
+          return std::pow(float_type{1.f} + p2_mass / p1_mass,
                           float_type{1.f} / float_type{3.f}) *
-                 p1.template get<saga::physics::radius>();
+                 p1_radius;
         };
 
-        float_type R = src.get_mass() > tgt.get_mass()
-                           ? radius_from_mass(src, tgt)
-                           : radius_from_mass(tgt, src);
+        auto src_mass = src.get_mass();
+        auto tgt_mass = tgt.get_mass();
+
+        float_type R =
+            src_mass > tgt_mass
+                ? radius_from_mass(src.template get<saga::physics::radius>(),
+                                   src_mass, tgt_mass)
+                : radius_from_mass(tgt.template get<saga::physics::radius>(),
+                                   tgt_mass, src_mass);
+
+        auto total_mass = src_mass + tgt_mass;
 
         // positions of the collision
-        src.set_x(0.5 * (src.get_x() + tgt.get_x()));
-        src.set_x(0.5 * (src.get_y() + tgt.get_y()));
-        src.set_x(0.5 * (src.get_z() + tgt.get_z()));
+        src.set_x((src_mass * src.get_x() + tgt_mass * tgt.get_x()) /
+                  total_mass);
+        src.set_y((src_mass * src.get_y() + tgt_mass * tgt.get_y()) /
+                  total_mass);
+        src.set_z((src_mass * src.get_z() + tgt_mass * tgt.get_z()) /
+                  total_mass);
 
         src.set_px(src.get_px() + tgt.get_px());
         src.set_py(src.get_py() + tgt.get_py());

@@ -21,12 +21,9 @@ if __name__ == '__main__':
     parser.add_argument('input_file', type=str, help='Data file to read')
     parser.add_argument('--marker-sizes', nargs='+', type=int, default=None, help='Marker sizes for the particle points')
     parser.add_argument('--box-view', nargs=2, type=float, default=None, help='Range in X, Y an Z')
-    parser.add_argument('--x-range', nargs=2, type=float, default=None, help='Range in X (incompatible with the --box-view argument)')
-    parser.add_argument('--y-range', nargs=2, type=float, default=None, help='Range in Y (incompatible with the --box-view argument)')
-    parser.add_argument('--z-range', nargs=2, type=float, default=None, help='Range in Z (incompatible with the --box-view argument)')
     parser.add_argument('--show-tracks', action='store_true', help='Whether to show a faint line with the track followed by the particles')
     parser.add_argument('--track-size', type=float, default=5e-3, help='Size of the tracks')
-    parser.add_argument('--figure-size', nargs=2, default=(10, 10), help='Size of the figure')
+    parser.add_argument('--figure-size', type=float, default=8, help='Size of the figure')
     parser.add_argument('--save', type=str, default=None, help='Name of the output file in which the animation will be saved as a GIF. Either --show or --save must be provided.')
     parser.add_argument('--show', action='store_true', help='Whether to show the animation. Either --show or --save must be provided.')
 
@@ -35,14 +32,38 @@ if __name__ == '__main__':
     if not args.show and not args.save:
         raise RuntimeError('You must tell the script whether you want to show the result, save it or both (via --save/--show)')
 
+    logger.info(f'Reading input data from "{args.input_file}"')
+
     df = pandas.DataFrame.from_records(np.loadtxt(args.input_file, dtype=[(n, np.int32) for n in ('epoch',)] + [(n, np.float32) for n in  ('x', 'y', 'z', 'px', 'py', 'pz', 'radius')]))
 
     # PLOT
-    fig = plt.figure(figsize=args.figure_size)
+    fig = plt.figure(figsize=(args.figure_size, args.figure_size))
     ax = p3.Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
-    normalized_sizes = lambda radius: (radius / np.min(radius))**2
+    # Setting the axes properties
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    if args.box_view is not None:
+        mn, mx = args.box_view
+    else:
+        mn = df[['x', 'y', 'z']].values.min()
+        mx = df[['x', 'y', 'z']].values.max()
+
+        if abs(mn) > abs(mx):
+            mn = - 1.1 * abs(mn)
+            mx = + 1.1 * abs(mn)
+        else:
+            mn = - 1.1 * abs(mx)
+            mx = + 1.1 * abs(mx)
+
+    ax.set_xlim3d((mn, mx))
+    ax.set_ylim3d((mn, mx))
+    ax.set_zlim3d((mn, mx))
+
+    normalized_sizes = lambda radius: (plt.rcParams['figure.dpi'] * args.figure_size * radius / (mx - mn))**2
 
     def scatter_for_index(ax, data, index):
 
@@ -86,28 +107,6 @@ if __name__ == '__main__':
         tracks = None
 
     lines = scatter_for_index(ax, df, 0)
-
-    # Setting the axes properties
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    mn = df[['x', 'y', 'z']].values.min()
-    mx = df[['x', 'y', 'z']].values.max()
-
-    if abs(mn) > abs(mx):
-        mn = - 1.1 * abs(mn)
-        mx = + 1.1 * abs(mn)
-    else:
-        mn = - 1.1 * abs(mx)
-        mx = + 1.1 * abs(mx)
-
-    if any((args.x_range, args.y_range, args.z_range)) and args.box_view:
-        raise ValueError('Can not specify a range view in X, Y and/or Z and --box-view at the same time')
-
-    ax.set_xlim3d(args.x_range or (args.box_view or (mn, mx)))
-    ax.set_ylim3d(args.y_range or (args.box_view or (mn, mx)))
-    ax.set_zlim3d(args.z_range or (args.box_view or (mn, mx)))
 
     logger.info('Start animation')
 
