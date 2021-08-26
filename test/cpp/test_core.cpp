@@ -53,9 +53,9 @@ saga::test::errors test_container() {
   return errors;
 }
 
-saga::test::errors test_proxy() {
+saga::test::errors test_iterator() {
 
-  auto errors = saga::test::test_proxy<simple_container>();
+  auto errors = saga::test::test_iterator<simple_container>();
 
   simple_container container(10);
 
@@ -107,7 +107,7 @@ int main() {
 
   saga::test::collector container_collector("container");
   SAGA_TEST_UTILS_ADD_TEST(container_collector, test_container);
-  SAGA_TEST_UTILS_ADD_TEST(container_collector, test_proxy);
+  SAGA_TEST_UTILS_ADD_TEST(container_collector, test_iterator);
   SAGA_TEST_UTILS_ADD_TEST(container_collector, test_value);
 
   saga::test::collector utils_collector("utils");

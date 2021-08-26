@@ -101,32 +101,34 @@ namespace saga::test {
   }
 
   // Template function to test proxies
-  template <class Container> saga::test::errors test_proxy() {
+  template <class Container> saga::test::errors test_iterator() {
 
     saga::test::errors errors;
 
     Container container(10);
 
-    auto proxy_0 = container.begin();
-    auto proxy_1 = container.begin() + 1;
+    auto it_0 = container.begin();
+    auto it_1 = container.begin() + 1;
 
-    proxy_0 = proxy_1;
-    if (proxy_0 == proxy_1)
-      errors.emplace_back("Assigning a proxy to another is not done correctly");
-
-    auto cproxy_1 = container.cbegin();
-    auto cproxy_0 = cproxy_1++;
-    if (cproxy_0 == cproxy_1)
+    it_0 = it_1;
+    if (it_0 != it_1)
       errors.emplace_back(
-          "Assigning a constant proxy to another is not done correctly");
+          "Assigning an iterator to another is not done correctly");
+
+    auto cit_0 = container.cbegin();
+    auto cit_1 = ++cit_0;
+
+    if (cit_0 != cit_1)
+      errors.emplace_back(
+          "Assigning a constant iterator to another is not done correctly");
 
     if (container.begin() == container.end())
       errors.emplace_back(
-          "Beginning and end of container evaluate to the same proxy");
+          "Beginning and end of container evaluate to the same iterator");
 
     if (container.cbegin() == container.cend())
-      errors.emplace_back(
-          "Beginning and end of constant container evaluate to the same proxy");
+      errors.emplace_back("Beginning and end of constant container evaluate to "
+                          "the same iterator");
 
     return errors;
   }

@@ -246,12 +246,12 @@ namespace saga::physics {
                 other.index()) {}
 
       const_proxy_type &operator=(const_proxy_type const &p) {
-        base_type::proxy_type::operator=(p);
+        base_type::const_proxy_type::operator=(p);
         return *this;
       }
 
       const_proxy_type &operator=(const_proxy_type &&p) {
-        base_type::proxy_type::operator=(p);
+        base_type::const_proxy_type::operator=(p);
         return *this;
       }
 

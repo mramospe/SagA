@@ -387,6 +387,16 @@ namespace saga {
                   static_cast<container_type const *>(other.container_ptr()),
                   other.index()) {}
 
+        const_proxy_type &operator=(proxy_type const &p) {
+          base_type::const_proxy_type::operator=(p);
+          return *this;
+        }
+
+        const_proxy_type &operator=(proxy_type &&p) {
+          base_type::const_proxy_type::operator=(p);
+          return *this;
+        }
+
         auto const &get_x() const {
           return this->template get<saga::property::x>();
         }

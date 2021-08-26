@@ -10,7 +10,7 @@ saga::test::errors test_forces_proxy() {
 
   using container_of_forces = saga::physics::forces<saga::cpu::sf>;
 
-  auto errors = saga::test::test_proxy<container_of_forces>();
+  auto errors = saga::test::test_iterator<container_of_forces>();
 
   container_of_forces container(1);
 
@@ -34,7 +34,7 @@ saga::test::errors test_particles_proxy() {
 
   using container_of_particles = saga::particles<saga::cpu::sf>;
 
-  auto errors = saga::test::test_proxy<container_of_particles>();
+  auto errors = saga::test::test_iterator<container_of_particles>();
 
   container_of_particles container(1);
 
