@@ -2,7 +2,7 @@
 #include "saga/all.hpp"
 #include <fstream>
 
-using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
+using sou = saga::solar_system<saga::cpu::sf>;
 
 template <class Planet, std::size_t I, class Particles>
 void prepare_planet(Particles &container) {
@@ -53,14 +53,13 @@ void prepare_for_planets(Particles &container) {
 
 int main() {
 
-  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
-      world;
+  saga::world<saga::cpu::sf, saga::physics::sphere> world;
 
   auto delta_t = sou::time_from_si(24.f * 3600.f);
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::types::cpu::single_float_precision>{
+      saga::physics::field_constant<saga::cpu::sf>{
           sou::gravitational_constant});
 
   world.configure([&](auto &container) {

@@ -47,13 +47,13 @@ namespace saga::physics::collision {
       float_type sqrt_arg = b * b - 4 * a * c;
 
       // cases where particles are at rest
-      if (std::abs(a) <= saga::types::numeric_info<TypeDescriptor>::min) {
-        m_dt = saga::types::numeric_info<TypeDescriptor>::max;
+      if (std::abs(a) <= saga::numeric_info<TypeDescriptor>::min) {
+        m_dt = saga::numeric_info<TypeDescriptor>::max;
       } else {
 
         if (sqrt_arg < 0)
-          m_dt = saga::types::numeric_info<TypeDescriptor>::max;
-        else if (sqrt_arg <= saga::types::numeric_info<TypeDescriptor>::min)
+          m_dt = saga::numeric_info<TypeDescriptor>::max;
+        else if (sqrt_arg <= saga::numeric_info<TypeDescriptor>::min)
           m_dt = -0.5 * b / a;
         else {
 

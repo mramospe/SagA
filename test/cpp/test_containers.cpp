@@ -3,14 +3,12 @@
 
 // Alias functions to test a container of forces
 saga::test::errors test_forces_container() {
-  return saga::test::test_container<
-      saga::physics::forces<saga::types::cpu::single_float_precision>>();
+  return saga::test::test_container<saga::physics::forces<saga::cpu::sf>>();
 }
 
 saga::test::errors test_forces_proxy() {
 
-  using container_of_forces =
-      saga::physics::forces<saga::types::cpu::single_float_precision>;
+  using container_of_forces = saga::physics::forces<saga::cpu::sf>;
 
   auto errors = saga::test::test_proxy<container_of_forces>();
 
@@ -24,20 +22,17 @@ saga::test::errors test_forces_proxy() {
 }
 
 saga::test::errors test_forces_value() {
-  return saga::test::test_value<
-      saga::physics::forces<saga::types::cpu::single_float_precision>>();
+  return saga::test::test_value<saga::physics::forces<saga::cpu::sf>>();
 }
 
 // Alias functions to test a container of particles
 saga::test::errors test_particles_container() {
-  return saga::test::test_container<
-      saga::particles<saga::types::cpu::single_float_precision>>();
+  return saga::test::test_container<saga::particles<saga::cpu::sf>>();
 }
 
 saga::test::errors test_particles_proxy() {
 
-  using container_of_particles =
-      saga::particles<saga::types::cpu::single_float_precision>;
+  using container_of_particles = saga::particles<saga::cpu::sf>;
 
   auto errors = saga::test::test_proxy<container_of_particles>();
 
@@ -51,8 +46,7 @@ saga::test::errors test_particles_proxy() {
 }
 
 saga::test::errors test_particles_value() {
-  return saga::test::test_value<
-      saga::particles<saga::types::cpu::single_float_precision>>();
+  return saga::test::test_value<saga::particles<saga::cpu::sf>>();
 }
 
 int main() {

@@ -4,21 +4,29 @@
 #include <limits>
 #include <type_traits>
 
-namespace saga::types {
+namespace saga {
 
   namespace cpu {
 
+    /// Floating-point number with single precision
     struct single_float_precision {
       static constexpr auto backend = saga::backend::CPU;
       using float_type = float;
       using int_type = int;
     };
 
+    /// Alias for \ref single_float_precision
+    using sf = single_float_precision;
+
+    /// Floating-point number with double precision
     struct double_float_precision {
       static constexpr auto backend = saga::backend::CPU;
       using float_type = double;
       using int_type = int;
     };
+
+    /// Alias for \ref double_float_precision
+    using df = double_float_precision;
   } // namespace cpu
 
   template <class TypeDescriptor> struct numeric_info;
@@ -40,6 +48,9 @@ namespace saga::types {
     static constexpr auto max = std::numeric_limits<
         typename cpu::double_float_precision::float_type>::max();
   };
+} // namespace saga
+
+namespace saga::core {
 
   template <class T> struct is_valid_type_descriptor : std::false_type {};
 
@@ -66,4 +77,4 @@ namespace saga::types {
   static constexpr auto is_type_descriptor_type_v =
       is_type_descriptor_type<TypeDescriptor, T>::value;
 
-} // namespace saga::types
+} // namespace saga::core

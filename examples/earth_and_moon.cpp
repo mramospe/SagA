@@ -2,18 +2,17 @@
 #include "saga/all.hpp"
 #include <fstream>
 
-using sou = saga::earth_system<saga::types::cpu::single_float_precision>;
+using sou = saga::earth_system<saga::cpu::sf>;
 
 int main() {
 
-  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
-      world;
+  saga::world<saga::cpu::sf, saga::physics::sphere> world;
 
   auto delta_t = sou::time_from_si(3600.);
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::types::cpu::single_float_precision>{
+      saga::physics::field_constant<saga::cpu::sf>{
           sou::gravitational_constant});
 
   world.configure([&](auto &container) {

@@ -15,9 +15,8 @@ namespace saga::core {
     /// Field with an associated floating-point value
     template <class TypeDescriptor>
     struct floating_point_field<
-        TypeDescriptor,
-        std::enable_if_t<
-            saga::types::is_valid_type_descriptor_v<TypeDescriptor>>> {
+        TypeDescriptor, std::enable_if_t<saga::core::is_valid_type_descriptor_v<
+                            TypeDescriptor>>> {
       using float_type = typename TypeDescriptor::float_type;
     };
 

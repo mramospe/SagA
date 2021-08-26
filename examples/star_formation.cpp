@@ -3,13 +3,11 @@
 #include <fstream>
 #include <random>
 
-using prec = saga::types::cpu::single_float_precision;
-using sou = saga::solar_system<saga::types::cpu::single_float_precision>;
+using sou = saga::solar_system<saga::cpu::sf>;
 
 int main() {
 
-  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
-      world;
+  saga::world<saga::cpu::sf, saga::physics::sphere> world;
 
   world.set_collision_handler<saga::physics::collision::simple_merge>();
 
@@ -17,8 +15,8 @@ int main() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<prec>{sou::gravitational_constant},
-      saga::physics::soften_factor<prec>{float{1e-4}});
+      saga::physics::field_constant<saga::cpu::sf>{sou::gravitational_constant},
+      saga::physics::soften_factor<saga::cpu::sf>{float{1e-4}});
 
   world.configure([&](auto &container) {
     container.resize(100);

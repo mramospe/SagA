@@ -6,7 +6,7 @@ saga::test::errors test_gravitational() {
 
   saga::test::errors errors;
 
-  saga::world<saga::types::cpu::single_float_precision> world;
+  saga::world<saga::cpu::sf> world;
 
   std::size_t particles_per_coordinate = 2;
   std::size_t number_of_particles = particles_per_coordinate *
@@ -15,8 +15,7 @@ saga::test::errors test_gravitational() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::types::cpu::single_float_precision>{
-          1.f});
+      saga::physics::field_constant<saga::cpu::sf>{1.f});
 
   world.configure([&](auto &container) {
     container.resize(number_of_particles);
@@ -50,8 +49,7 @@ saga::test::errors test_collisions_elastic() {
 
   saga::test::errors errors;
 
-  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
-      world;
+  saga::world<saga::cpu::sf, saga::physics::sphere> world;
 
   world.set_collision_handler<saga::physics::collision::elastic>();
 
@@ -62,8 +60,7 @@ saga::test::errors test_collisions_elastic() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::types::cpu::single_float_precision>{
-          1.f});
+      saga::physics::field_constant<saga::cpu::sf>{1.f});
 
   world.configure([&](auto &container) {
     container.resize(number_of_particles);
@@ -94,8 +91,7 @@ saga::test::errors test_collisions_simple_merge() {
 
   saga::test::errors errors;
 
-  saga::world<saga::types::cpu::single_float_precision, saga::physics::sphere>
-      world;
+  saga::world<saga::cpu::sf, saga::physics::sphere> world;
 
   world.set_collision_handler<saga::physics::collision::simple_merge>();
 
@@ -106,8 +102,7 @@ saga::test::errors test_collisions_simple_merge() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::types::cpu::single_float_precision>{
-          1.f});
+      saga::physics::field_constant<saga::cpu::sf>{1.f});
 
   world.configure([&](auto &container) {
     container.resize(number_of_particles);

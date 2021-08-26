@@ -74,7 +74,7 @@ namespace saga::physics {
         : interaction_base_type{},
           keywords_parser_base_type(
               std::make_tuple(soften_factor<TypeDescriptor>{
-                  saga::types::numeric_info<TypeDescriptor>::min}),
+                  saga::numeric_info<TypeDescriptor>::min}),
               std::forward<K>(v)...) {}
 
     // Allow copy/move ellision

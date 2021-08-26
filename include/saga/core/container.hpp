@@ -21,7 +21,7 @@ namespace saga::core {
     static_assert(sizeof...(Field) > 0,
                   "Containers without fields make no sense");
 
-    static_assert(saga::types::is_valid_type_descriptor_v<TypeDescriptor>);
+    static_assert(saga::core::is_valid_type_descriptor_v<TypeDescriptor>);
 
   public:
     using base_type = std::tuple<saga::core::container_t<

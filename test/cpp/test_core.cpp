@@ -2,8 +2,8 @@
 #include "test_utils.hpp"
 
 using simple_container =
-    saga::core::container_with_fields<saga::types::cpu::single_float_precision,
-                                      saga::property::x, saga::property::y>;
+    saga::core::container_with_fields<saga::cpu::sf, saga::property::x,
+                                      saga::property::y>;
 
 saga::test::errors test_utils() {
 
