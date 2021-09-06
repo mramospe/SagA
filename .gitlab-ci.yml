@@ -5,14 +5,14 @@ stages:
    - test
 
 before_script:
-   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
+   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_100 x86_64-centos7-gcc10-opt
 
 build:
    stage: build
    script:
       - mkdir build
       - cd build
-      - cmake ../ -DINSTALL_TESTS=ON
+      - cmake ../ -DINSTALL_EXAMPLES=ON -DINSTALL_TESTS=ON
       - make install
    artifacts:
       paths:
@@ -21,10 +21,22 @@ build:
 test:
    stage: test
    script:
-      - ./build/test/test
-      - ./build/test/test_earth
-   dependencies:
-      - build
+      - ./build/test/cpp/test_core
+      - ./build/test/cpp/test_containers
+      - ./build/test/cpp/test_world
+   needs:
+      - job: build
+        artifacts: true
+
+examples:
+   stage: test
+   script:
+      - ./build/examples/earth_and_moon
+      - ./build/examples/solar_system
+      - ./build/examples/star_formation
+   needs:
+      - job: build
+        artifacts: true
 
 cmake:
    stage: test
@@ -34,10 +46,14 @@ cmake:
       - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../
       - make
       - ./main
-   dependencies:
-      - build
+   needs:
+      - job: build
+        artifacts: true
 
 format:
    stage: test
+   image: ubuntu:20.04
+   before_script:
+      - apt-get update && apt-get install -y clang-format
    script:
       - clang-format --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")

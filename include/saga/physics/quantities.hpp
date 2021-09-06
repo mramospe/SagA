@@ -5,7 +5,19 @@
 
 namespace saga {
 
-  template <template <class T> class... Property> struct properties {};
+  template <template <class> class... Property> struct properties {};
+
+  template <class Properties, template <class> class... P>
+  struct append_properties;
+
+  template <template <class> class... P0, template <class> class... P1>
+  struct append_properties<properties<P0...>, P1...> {
+    using type = properties<P0..., P1...>;
+  };
+
+  template <class Properties, template <class> class... P>
+  using append_properties_t =
+      typename append_properties<Properties, P...>::type;
 
   namespace property {
 
@@ -18,6 +30,7 @@ namespace saga {
       struct py {};
       struct pz {};
       struct e {};
+      struct electric_charge {};
     } // namespace detail
 
     // Position
@@ -60,6 +73,13 @@ namespace saga {
     template <class TypeDescriptor>
     using e =
         saga::core::property_configuration<detail::e,
+                                           typename TypeDescriptor::float_type,
+                                           TypeDescriptor::backend>;
+
+    // Additional
+    template <class TypeDescriptor>
+    using electric_charge =
+        saga::core::property_configuration<detail::electric_charge,
                                            typename TypeDescriptor::float_type,
                                            TypeDescriptor::backend>;
 

@@ -15,9 +15,8 @@ namespace saga::core {
     /// Field with an associated floating-point value
     template <class TypeDescriptor>
     struct floating_point_field<
-        TypeDescriptor,
-        std::enable_if_t<
-            saga::types::is_valid_type_descriptor_v<TypeDescriptor>>> {
+        TypeDescriptor, std::enable_if_t<saga::core::is_valid_type_descriptor_v<
+                            TypeDescriptor>>> {
       using float_type = typename TypeDescriptor::float_type;
     };
 
@@ -59,37 +58,6 @@ namespace saga::core {
     /// Alias to extend fields
     template <class... Fields>
     using extend_fields_t = typename extend_fields<Fields...>::type;
-
-    /// Helper to apply functions on containers
-    template <class Fields> struct visitor;
-
-    /// Helper to apply functions on containers
-    template <class... Fields> struct visitor<fields_pack<Fields...>> {
-
-      /// Apply the function only on the first field container and return its
-      /// content
-      template <class Function, class Container, class... Args>
-      static auto invoke_first(Function fn, Container const &cont,
-                               Args &&... args) {
-        return fn(
-            saga::core::type_at_t<0, Fields...>::container_type::get(cont),
-            args...);
-      }
-
-      /// Apply the function in each of the field containers
-      template <class Function, class Container, class... Args>
-      static void invoke_void(Function fn, Container const &cont,
-                              Args &&... args) {
-        (fn(Fields::container_type::get(cont), args...), ...);
-      }
-
-      /// Apply the function in each of the field containers
-      template <class Function, class Container, class... Args>
-      static void invoke_void(Function fn, Container &cont, Args &&... args) {
-        (fn(Fields::container_type::get(cont), args...), ...);
-      }
-    };
-
   } // namespace fields
 
 } // namespace saga::core

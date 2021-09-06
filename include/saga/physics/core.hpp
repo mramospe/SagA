@@ -1,90 +1,115 @@
 #pragma once
-#include "saga/core/types.hpp"
-#include "saga/physics/force.hpp"
-#include "saga/physics/interaction.hpp"
+#include "saga/physics/electromagnetic.hpp"
+#include "saga/physics/gravity.hpp"
 #include "saga/physics/quantities.hpp"
-#include <cmath>
-#include <tuple>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
-namespace saga {
+/// Definition of physic parameters and interactions
+namespace saga::physics {
 
-  /*!\brief Gravitational non-relativistic interaction
-   */
-  template <class TypeDescriptor>
-  struct gravitational_non_relativistic_interaction
-      : public saga::physics::interaction<
-            TypeDescriptor,
-            typename saga::physics::forces<TypeDescriptor>::value_type,
-            property::x, property::y, property::z, property::px, property::py,
-            property::pz, property::e> {
+  /// Check if the given interaction is valid for that set of properties
+  template <template <class> class Interaction, class Properties>
+  struct is_available_interaction : std::false_type {};
 
-  public:
-    /// Value returned by the functor
-    using return_type =
-        typename saga::physics::forces<TypeDescriptor>::value_type;
+  /// Enable only
+  template <template <class> class... Property>
+  struct is_available_interaction<
+      saga::physics::coulomb_non_relativistic_interaction,
+      saga::properties<Property...>>
+      : std::conditional_t<saga::core::is_template_in_v<
+                               saga::property::electric_charge, Property...>,
+                           std::true_type, std::false_type> {};
 
-    /// Floating-point type to use
-    using float_type = typename TypeDescriptor::float_type;
+  /// Gravity can always be included
+  template <template <class> class... Property>
+  struct is_available_interaction<
+      saga::physics::gravitational_non_relativistic_interaction,
+      saga::properties<Property...>> : std::true_type {};
 
-    /// Build from the interaction constants
-    gravitational_non_relativistic_interaction() = default;
-    gravitational_non_relativistic_interaction(float_type G)
-        : m_gravitational_constant{G} {}
+  /// Alias to check if the interaction is valid for the given properties
+  template <template <class> class Interaction, class Properties>
+  static constexpr bool is_available_interaction_v =
+      is_available_interaction<Interaction, Properties>::value;
 
-    /// Evaluate the force
-    return_type force(float_type delta_t, float_type tgt_x, float_type tgt_y,
-                      float_type tgt_z, float_type tgt_px, float_type tgt_py,
-                      float_type tgt_pz, float_type tgt_e, float_type src_x,
-                      float_type src_y, float_type src_z, float_type src_px,
-                      float_type src_py, float_type src_pz,
-                      float_type src_e) const override {
+  /// Implementations that are specific to the physics namespace
+  namespace detail {
 
-      float_type const tgt_mass = std::sqrt(std::abs(
-          tgt_e * tgt_e - tgt_px * tgt_px - tgt_py * tgt_py - tgt_pz * tgt_pz));
-      float_type const src_mass = std::sqrt(std::abs(
-          src_e * src_e - src_px * src_px - src_py * src_py - src_pz * src_pz));
+    /// Represent a set of interactions
+    template <template <class> class... Interaction> struct interactions {};
 
-      float_type const dx = src_x - tgt_x;
-      float_type const dy = src_y - tgt_y;
-      float_type const dz = src_z - tgt_z;
+    /// All the existing interactions
+    using all_interactions =
+        interactions<saga::physics::gravitational_non_relativistic_interaction,
+                     saga::physics::coulomb_non_relativistic_interaction>;
 
-      float_type const r2 = dx * dx + dy * dy + dz * dz;
+    /// Extend a variant of interactions if that given as template argument can
+    /// be used for the given set of properties
+    template <class Variant, class TypeDescriptor,
+              template <class> class Interaction, class Properties>
+    struct extend_variant_for_interaction;
 
-      if (r2 <= saga::types::numeric_info<TypeDescriptor>::min)
-        return {0.f, 0.f, 0.f, 0.f};
+    /// Extend a variant of interactions if that given as template argument can
+    /// be used for the given set of properties
+    template <class TypeDescriptor, class... T,
+              template <class> class Interaction, class Properties>
+    struct extend_variant_for_interaction<std::variant<T...>, TypeDescriptor,
+                                          Interaction, Properties> {
+      using type = std::conditional_t<
+          is_available_interaction_v<Interaction, Properties>,
+          std::variant<T..., Interaction<TypeDescriptor>>, std::variant<T...>>;
+    };
 
-      float_type const tgt_force =
-          m_gravitational_constant * tgt_mass * src_mass / r2;
+    /// Extend a variant of interactions if that given as template argument can
+    /// be used for the given set of properties
+    template <class Variant, class TypeDescriptor,
+              template <class> class Interaction, class Properties>
+    using extend_variant_for_interaction_t =
+        typename extend_variant_for_interaction<Variant, TypeDescriptor,
+                                                Interaction, Properties>::type;
 
-      float_type const r = std::sqrt(r2);
+    /// Determine and represent a variant of interactions for the given set of
+    /// properties
+    template <class TypeDescriptor, class Variant, class Interactions,
+              class Properties>
+    struct interaction_variant_impl;
 
-      float_type const ux = dx / r;
-      float_type const uy = dy / r;
-      float_type const uz = dz / r;
+    /// Determine and represent a variant of interactions for the given set of
+    /// properties
+    template <class TypeDescriptor, class... T, template <class> class I0,
+              template <class> class... Interaction, class Properties>
+    struct interaction_variant_impl<TypeDescriptor, std::variant<T...>,
+                                    interactions<I0, Interaction...>,
+                                    Properties> {
+      using type = typename interaction_variant_impl<
+          TypeDescriptor,
+          extend_variant_for_interaction_t<std::variant<T...>, TypeDescriptor,
+                                           I0, Properties>,
+          interactions<Interaction...>, Properties>::type;
+    };
 
-      float_type const mom =
-          std::sqrt(tgt_px * tgt_px + tgt_py * tgt_py + tgt_pz * tgt_pz);
-      float_type const de_dt = mom * tgt_force / (tgt_mass * delta_t);
+    /// Determine and represent a variant of interactions for the given set of
+    /// properties
+    template <class TypeDescriptor, class... T, template <class> class I0,
+              class Properties>
+    struct interaction_variant_impl<TypeDescriptor, std::variant<T...>,
+                                    interactions<I0>, Properties> {
+      using type =
+          extend_variant_for_interaction_t<std::variant<T...>, TypeDescriptor,
+                                           I0, Properties>;
+    };
+  } // namespace detail
 
-      return {tgt_force * ux, tgt_force * uy, tgt_force * uz, de_dt};
-    }
+  /// Represent a variant for any kind of interaction
+  template <class TypeDescriptor, class Properties>
+  using interaction_variant =
+      typename detail::interaction_variant_impl<TypeDescriptor, std::variant<>,
+                                                detail::all_interactions,
+                                                Properties>::type;
 
-    /// Gravitational constant
-    float_type m_gravitational_constant = 6.67430e-11;
-  };
-
-  namespace physics {
-    /// Represent a variant for any kind of interaction
-    template <class TypeDescriptor>
-    using interaction_variant = std::variant<
-        gravitational_non_relativistic_interaction<TypeDescriptor>>;
-
-    /// Represent a collection of interactions
-    template <class TypeDescriptor>
-    using interactions_variant =
-        std::vector<interaction_variant<TypeDescriptor>>;
-  } // namespace physics
-
-} // namespace saga
+  /// Represent a collection of interactions
+  template <class TypeDescriptor, class Properties>
+  using interactions_variant =
+      std::vector<interaction_variant<TypeDescriptor, Properties>>;
+} // namespace saga::physics
