@@ -9,16 +9,11 @@
 
 namespace saga::physics {
 
-  template <class TypeDescriptor> struct float_field_keyword {
-    using value_type = typename TypeDescriptor::float_type;
-    value_type value;
-  };
+  /// Keyword argument for the field constant of a central force
+  struct field_constant : public saga::core::keywords::keyword_float {};
 
-  template <class TypeDescriptor>
-  struct field_constant : float_field_keyword<TypeDescriptor> {};
-
-  template <class TypeDescriptor>
-  struct soften_factor : float_field_keyword<TypeDescriptor> {};
+  /// Keyword argument for the the soften factor of a central force
+  struct soften_factor : public saga::core::keywords::keyword_float {};
 
   /*!\brief  Base class to define an interaction
    */
@@ -73,8 +68,8 @@ namespace saga::physics {
     central_force_non_relativistic(K &&... v)
         : interaction_base_type{},
           keywords_parser_base_type(
-              std::make_tuple(soften_factor<TypeDescriptor>{
-                  saga::numeric_info<TypeDescriptor>::min}),
+              std::make_tuple(
+                  soften_factor{saga::numeric_info<TypeDescriptor>::min}),
               std::forward<K>(v)...) {}
 
     // Allow copy/move ellision

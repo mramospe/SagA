@@ -15,7 +15,7 @@ saga::test::errors test_gravitational() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::cpu::sf>{1.f});
+      saga::physics::field_constant{1.f});
 
   world.configure([&](auto &container) {
     container.resize(number_of_particles);
@@ -60,7 +60,7 @@ saga::test::errors test_collisions_elastic() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::cpu::sf>{1.f});
+      saga::physics::field_constant{1.f});
 
   world.configure([&](auto &container) {
     container.resize(number_of_particles);
@@ -102,7 +102,7 @@ saga::test::errors test_collisions_simple_merge() {
 
   world.add_interaction<
       saga::physics::gravitational_non_relativistic_interaction>(
-      saga::physics::field_constant<saga::cpu::sf>{1.f});
+      saga::physics::field_constant{1.f});
 
   world.configure([&](auto &container) {
     container.resize(number_of_particles);
