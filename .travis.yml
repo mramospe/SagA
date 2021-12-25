@@ -20,7 +20,8 @@ before_install:
 - ${CC} --version
 - ${CXX} --version
 - cmake --version
-- sudo apt-get install clang-format
+- sudo apt-get update
+- sudo apt-get install -y clang-format
 - clang-format --version
 
 install:
