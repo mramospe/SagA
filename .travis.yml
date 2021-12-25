@@ -11,8 +11,7 @@ addons:
     - cmake
     - clang-format-10
 env:
-- CC=gcc-7 CXX=g++-7
-- CLANG_FORMAT=clang-format-10
+- CC=gcc-7 CXX=g++-7 CLANG_FORMAT=clang-format-10
 
 #branches:
 #  only:
