@@ -12,6 +12,7 @@ addons:
     - clang-format-10
 env:
 - CC=gcc-7 CXX=g++-7
+- CLANG_FORMAT=clang-format-10
 
 #branches:
 #  only:
@@ -21,7 +22,7 @@ before_install:
 - ${CC} --version
 - ${CXX} --version
 - cmake --version
-- clang-format --version
+- ${CLANG_FORMAT} --version
 
 install:
 - mkdir build
@@ -54,4 +55,4 @@ jobs:
     python: 3.7
     install: " "
     script:
-    - clang-format --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")
+    - ${CLANG_FORMAT} --dry-run -Werror $(find . \( -name "*.cpp" -or -name "*.hpp" \) -and -not -path "*build*")
