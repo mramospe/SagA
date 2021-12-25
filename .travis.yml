@@ -1,4 +1,4 @@
-dist: xenial
+dist: bionic
 language: python
 
 os: linux
@@ -21,6 +21,7 @@ before_install:
 - ${CXX} --version
 - cmake --version
 - sudo apt-get install clang-format
+- clang-format --version
 
 install:
 - mkdir build
