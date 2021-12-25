@@ -14,9 +14,9 @@ addons:
 env:
 - CC=gcc-10 CXX=g++-10 CLANG_FORMAT=clang-format-10
 
-#branches:
-#  only:
-#  - master
+branches:
+  only:
+  - master
 
 before_install:
 - ${CC} --version
