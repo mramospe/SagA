@@ -17,6 +17,7 @@ env:
 branches:
   only:
   - master
+  - devel
 
 before_install:
 - ${CC} --version
