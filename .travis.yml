@@ -9,6 +9,7 @@ addons:
     packages:
     - g++-7
     - cmake
+    - clang-format-10
 env:
 - CC=gcc-7 CXX=g++-7
 
@@ -20,8 +21,6 @@ before_install:
 - ${CC} --version
 - ${CXX} --version
 - cmake --version
-- sudo apt-get update
-- sudo apt-get install -y clang-format-10
 - clang-format --version
 
 install:
