@@ -25,7 +25,7 @@ namespace saga::core {
 #if SAGA_CUDA_ENABLED
   /// Container for the CUDA backend
   template <class T> struct container<T, saga::backend::CUDA> {
-    using type = saga::core::cuda::vector<T, saga::core::cuda::host>;
+    using type = saga::core::cuda::vector<T>;
   };
 #endif
 

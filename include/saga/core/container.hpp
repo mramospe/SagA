@@ -24,19 +24,21 @@ namespace saga::core {
                   "File descriptor is not valid");
 
   public:
+    using type_descriptor = TypeDescriptor;
+
     using base_type = std::tuple<saga::core::container_t<
-        saga::core::underlying_value_type_t<Field<TypeDescriptor>>,
-        TypeDescriptor::backend>...>;
+        saga::core::underlying_value_type_t<Field<type_descriptor>>,
+        type_descriptor::backend>...>;
 
     using fields_type =
-        saga::core::fields::fields_pack<Field<TypeDescriptor>...>;
+        saga::core::fields::fields_pack<Field<type_descriptor>...>;
 
     container_with_fields() = default;
     /// Construct the container with "n" elements
     container_with_fields(std::size_t n)
         : base_type(saga::core::container_t<
-                    saga::core::underlying_value_type_t<Field<TypeDescriptor>>,
-                    TypeDescriptor::backend>(n)...) {}
+                    saga::core::underlying_value_type_t<Field<type_descriptor>>,
+                    type_descriptor::backend>(n)...) {}
     container_with_fields(container_with_fields const &) = default;
     container_with_fields(container_with_fields &&) = default;
     container_with_fields &operator=(container_with_fields const &) = default;
@@ -70,21 +72,19 @@ namespace saga::core {
      */
     class value_type
         : protected std::tuple<
-              saga::core::underlying_value_type_t<Field<TypeDescriptor>>...> {
+              saga::core::underlying_value_type_t<Field<type_descriptor>>...> {
 
     public:
       using base_type = std::tuple<
-          saga::core::underlying_value_type_t<Field<TypeDescriptor>>...>;
+          saga::core::underlying_value_type_t<Field<type_descriptor>>...>;
 
       value_type() = default;
       value_type(
-          saga::core::underlying_value_type_t<Field<TypeDescriptor>> &&...v)
-          : base_type(
-                std::forward<
-                    saga::core::underlying_value_type_t<Field<TypeDescriptor>>>(
-                    v)...) {}
+          saga::core::underlying_value_type_t<Field<type_descriptor>> &&...v)
+          : base_type(std::forward<saga::core::underlying_value_type_t<
+                          Field<type_descriptor>>>(v)...) {}
       value_type(
-          saga::core::underlying_value_type_t<Field<TypeDescriptor>> const
+          saga::core::underlying_value_type_t<Field<type_descriptor>> const
               &...v)
           : base_type(v...) {}
       value_type(value_type const &) = default;
@@ -121,7 +121,7 @@ namespace saga::core {
 
       /// Set the values of all the fields
       template <template <class> class F>
-      void set(saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
+      void set(saga::core::underlying_value_type_t<F<type_descriptor>> v) {
         std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
       }
     };
@@ -184,7 +184,7 @@ namespace saga::core {
 
       /// Set each element in the associated field of the container
       template <template <class> class F>
-      void set(saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
+      void set(saga::core::underlying_value_type_t<F<type_descriptor>> v) {
 
         m_ptr->template set<F>(m_idx, v);
       }
@@ -473,10 +473,6 @@ namespace saga::core {
     }
 
     /// Get the container associated to the given field
-    template <template <class> class F> auto &get() {
-      return std::get<saga::core::template_index_v<F, Field...>>(*this);
-    }
-    /// Get the container associated to the given field
     template <template <class> class F> auto const &get() const {
       return std::get<saga::core::template_index_v<F, Field...>>(*this);
     }
@@ -495,8 +491,8 @@ namespace saga::core {
     /// Set the value associated to the given field and index in the container
     template <template <class> class F>
     void set(std::size_t i,
-             saga::core::underlying_value_type_t<F<TypeDescriptor>> v) {
-      this->template get<F>()[i] = v;
+             saga::core::underlying_value_type_t<F<type_descriptor>> v) {
+      std::get<saga::core::template_index_v<F, Field...>>(*this)[i] = v;
     }
 
     /// Begining of the container
@@ -561,5 +557,57 @@ namespace saga::core {
     void push_back_impl_single(ElementType const &el) {
       this->template get<F>().push_back(el.template get<F>());
     }
+
+    /// Set the container associated to the given field
+    template <template <class> class F, class Container>
+    void set(Container &&v) const {
+      std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+    }
+
+    template <template <class> class F, class Container>
+    void set(Container const &v) const {
+      std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+    }
+
+#if SAGA_CUDA_ENABLED
+  protected:
+    /*\brief
+
+     \warning: Meant to be used by inherited containers only
+    */
+    auto to_device() const {
+      return build_container_in_new_backend<saga::backend::CUDA, Field...>(
+          &saga::core::cuda::to_device);
+    }
+
+    /*\brief
+
+      \warning: Meant to be used by inherited containers only
+    */
+    auto to_host() const {
+      return build_container_in_new_backend<saga::backend::CPU, Field...>(
+          &saga::core::cuda::to_host);
+    }
+
+  private:
+    /// Alias to a type where the backend has been switched to a one different
+    /// from the previous
+    template <saga::backend NewBackend>
+    using type_with_backend =
+        container_with_fields<saga::core::switch_type_descriptor_backend_t<
+                                  NewBackend, TypeDescriptor>,
+                              Field...>;
+
+    template <saga::backend NewBackend, class Function,
+              template <class> class... Field>
+    auto build_container_in_new_backend(Function &&function) const {
+
+      type_with_backend<NewBackend> cont;
+
+      (cont.set<Field>(function(this->get<Field>()))...);
+
+      return cont;
+    }
+#endif
   };
 } // namespace saga::core

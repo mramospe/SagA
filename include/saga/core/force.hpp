@@ -26,21 +26,18 @@ namespace saga::core {
     auto const &get_x() const {
       return this->template get<saga::property::x>();
     }
-    auto &get_x() { return this->template get<saga::property::x>(); }
     void set_x(std::size_t i, float_type v) {
       this->template set<saga::property::x>(i, v);
     }
     auto const &get_y() const {
       return this->template get<saga::property::y>();
     }
-    auto &get_y() { return this->template get<saga::property::y>(); }
     void set_y(std::size_t i, float_type v) {
       this->template set<saga::property::y>(i, v);
     }
     auto const &get_z() const {
       return this->template get<saga::property::z>();
     }
-    auto &get_z() { return this->template get<saga::property::z>(); }
     void set_z(std::size_t i, float_type v) {
       this->template set<saga::property::z>(i, v);
     }

@@ -49,6 +49,21 @@ saga::test::errors test_particles_value() {
   return saga::test::test_value<saga::particles<saga::cpu::sf>>();
 }
 
+saga::test::errors test_particles_backend() {
+
+  saga::test::errors errors;
+
+  using cpu_particles_type = saga::particles<saga::cpu::sf>;
+  using cuda_particles_type =
+      typename cpu_particles_type::type_with_backend<saga::backend::CUDA>;
+
+  if (!std::is_same_v<cuda_particles_type, saga::particles<saga::cuda::sf>>)
+    errors.emplace_back(
+        "Unable to switch the particle container backend between CPU and CUDA");
+
+  return errors;
+}
+
 int main() {
 
   saga::test::collector forces_collector("forces");
@@ -60,6 +75,7 @@ int main() {
   SAGA_TEST_UTILS_ADD_TEST(particles_collector, test_particles_container);
   SAGA_TEST_UTILS_ADD_TEST(particles_collector, test_particles_proxy);
   SAGA_TEST_UTILS_ADD_TEST(particles_collector, test_particles_value);
+  SAGA_TEST_UTILS_ADD_TEST(particles_collector, test_particles_backend);
 
   auto forces_status = forces_collector.run();
   auto particles_status = particles_collector.run();

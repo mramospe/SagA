@@ -65,61 +65,78 @@ namespace saga {
       /// Shape type
       using shape_type = Shape<TypeDescriptor>;
 
+      /// Floating-point type used in the calculations
       using float_type = typename TypeDescriptor::float_type;
+
+      /// Alias to a type where the backend has been switched to a one different
+      /// from the previous
+      template <saga::backend NewBackend>
+      using type_with_backend =
+          particle_container<saga::core::switch_type_descriptor_backend_t<
+                                 NewBackend, TypeDescriptor>,
+                             Shape, saga::properties<Property...>>;
+
+#if SAGA_CUDA_ENABLED
+      /// Return this container with the data allocated in the device
+      std::enable_if_t<(TypeDescriptor::backend == saga::backend::CPU),
+                       type_with_backend<saga::backend::CUDA>>
+      to_device() const {
+        return base_class::to_device();
+      }
+
+      /// Return this container with the data allocated in the host
+      std::enable_if_t<(TypeDescriptor::backend == saga::backend::CUDA),
+                       type_with_backend<saga::backend::CPU>>
+      to_host() const {
+        return base_class::to_host();
+      }
+#endif
 
       auto const &get_x() const {
         return this->template get<saga::property::x>();
       }
-      auto &get_x() { return this->template get<saga::property::x>(); }
       void set_x(std::size_t i, float_type v) {
         this->template set<saga::property::x>(i, v);
       }
       auto const &get_y() const {
         return this->template get<saga::property::y>();
       }
-      auto &get_y() { return this->template get<saga::property::y>(); }
       void set_y(std::size_t i, float_type v) {
         this->template set<saga::property::y>(i, v);
       }
       auto const &get_z() const {
         return this->template get<saga::property::z>();
       }
-      auto &get_z() { return this->template get<saga::property::z>(); }
       void set_z(std::size_t i, float_type v) {
         this->template set<saga::property::z>(i, v);
       }
       auto const &get_t() const {
         return this->template get<saga::property::t>();
       }
-      auto &get_t() { return this->template get<saga::property::t>(); }
       void set_t(std::size_t i, float_type v) {
         this->template set<saga::property::t>(i, v);
       }
       auto const &get_px() const {
         return this->template get<saga::property::px>();
       }
-      auto &get_px() { return this->template get<saga::property::px>(); }
       void set_px(std::size_t i, float_type v) {
         this->template set<saga::property::px>(i, v);
       }
       auto const &get_py() const {
         return this->template get<saga::property::py>();
       }
-      auto &get_py() { return this->template get<saga::property::py>(); }
       void set_py(std::size_t i, float_type v) {
         this->template set<saga::property::py>(i, v);
       }
       auto const &get_pz() const {
         return this->template get<saga::property::pz>();
       }
-      auto &get_pz() { return this->template get<saga::property::pz>(); }
       void set_pz(std::size_t i, float_type v) {
         this->template set<saga::property::pz>(i, v);
       }
       auto const &get_e() const {
         return this->template get<saga::property::e>();
       }
-      auto &get_e() { return this->template get<saga::property::e>(); }
       void set_e(std::size_t i, float_type v) {
         this->template set<saga::property::e>(i, v);
       }
