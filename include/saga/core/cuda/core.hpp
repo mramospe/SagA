@@ -1,0 +1,3 @@
+#pragma once
+
+#define SAGA_CUDA_MAX_THREADS_PER_BLOCK_X 1024

@@ -85,14 +85,19 @@ namespace saga::physics {
     class proxy_type : public base_type::proxy_type {
     public:
       using container_type = forces;
+      using container_pointer_type = container_type *;
 
       /// Build the proxy from the container and the index
-      proxy_type(container_type *cont, std::size_t idx)
+      proxy_type(container_pointer_type cont, std::size_t idx)
           : base_type::proxy_type(cont, idx) {}
       proxy_type(proxy_type &&other)
-          : base_type::proxy_type(other.container_ptr(), other.index()) {}
+          : base_type::proxy_type(
+                static_cast<container_pointer_type>(other.container_ptr()),
+                other.index()) {}
       proxy_type(proxy_type const &other)
-          : base_type::proxy_type(other.container_ptr(), other.index()) {}
+          : base_type::proxy_type(
+                static_cast<container_pointer_type>(other.container_ptr()),
+                other.index()) {}
 
       proxy_type &operator=(proxy_type const &p) {
         base_type::proxy_type::operator=(p);
@@ -164,9 +169,10 @@ namespace saga::physics {
     class iterator_type : public base_type::iterator_type {
     public:
       using container_type = forces;
+      using container_pointer_type = container_type *;
 
       /// Build the proxy from the container and the index
-      iterator_type(container_type *cont, std::size_t idx)
+      iterator_type(container_pointer_type cont, std::size_t idx)
           : base_type::iterator_type(cont, idx) {}
       iterator_type(iterator_type &&other) = default;
       iterator_type(iterator_type const &) = default;
@@ -174,12 +180,13 @@ namespace saga::physics {
       iterator_type &operator=(iterator_type &&) = default;
 
       proxy_type operator*() {
-        return proxy_type{static_cast<container_type *>(this->container_ptr()),
-                          this->index()};
+        return proxy_type{
+            static_cast<container_pointer_type>(this->container_ptr()),
+            this->index()};
       }
       const_proxy_type operator*() const {
         return const_proxy_type{
-            static_cast<container_type const *>(this->container_ptr()),
+            static_cast<container_pointer_type>(this->container_ptr()),
             this->index()};
       }
 
@@ -233,17 +240,14 @@ namespace saga::physics {
     class const_proxy_type : public base_type::const_proxy_type {
     public:
       using container_type = forces;
+      using container_pointer_type = container_type const *;
 
-      const_proxy_type(container_type const *cont, std::size_t idx)
+      const_proxy_type(container_pointer_type cont, std::size_t idx)
           : base_type::const_proxy_type(cont, idx) {}
       const_proxy_type(const_proxy_type &&other)
-          : base_type::const_proxy_type(
-                static_cast<container_type const *>(other.container_ptr()),
-                other.index()) {}
+          : base_type::const_proxy_type(other.container_ptr(), other.index()) {}
       const_proxy_type(const_proxy_type const &other)
-          : base_type::const_proxy_type(
-                static_cast<container_type const *>(other.container_ptr()),
-                other.index()) {}
+          : base_type::const_proxy_type(other.container_ptr(), other.index()) {}
 
       const_proxy_type &operator=(const_proxy_type const &p) {
         base_type::const_proxy_type::operator=(p);
@@ -272,8 +276,9 @@ namespace saga::physics {
     class const_iterator_type : public base_type::const_iterator_type {
     public:
       using container_type = forces;
+      using container_pointer_type = container_type const *;
 
-      const_iterator_type(container_type const *cont, std::size_t idx)
+      const_iterator_type(container_pointer_type cont, std::size_t idx)
           : base_type::const_iterator_type(cont, idx) {}
       const_iterator_type(const_iterator_type &&other) = default;
       const_iterator_type(const_iterator_type const &other) = default;
@@ -283,13 +288,13 @@ namespace saga::physics {
 
       const_proxy_type operator*() {
         return const_proxy_type{
-            static_cast<container_type const *>(this->container_ptr()),
+            static_cast<container_pointer_type>(this->container_ptr()),
             this->index()};
       }
 
       const_proxy_type operator*() const {
         return const_proxy_type{
-            static_cast<container_type const *>(this->container_ptr()),
+            static_cast<container_pointer_type>(this->container_ptr()),
             this->index()};
       }
 

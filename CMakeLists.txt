@@ -6,6 +6,7 @@ LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
+option(SAGA_CUDA_ENABLED "Whether to enable CUDA or not (only used for tests and examples)" OFF)
 option(INSTALL_TESTS "Whether to install the test scripts or not" OFF)
 option(INSTALL_EXAMPLES "Whether to install the examples or not" OFF)
 
@@ -38,6 +39,13 @@ export(EXPORT ${PROJECT_NAME}Targets
   )
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION ${PROJECT_BINARY_DIR} FILES_MATCHING PATTERN *.hpp)
+
+#
+# If CUDA is enabled, add it to the compile definitions so it propagates through the code
+#
+if(SAGA_CUDA_ENABLED)
+  add_compile_definitions(SAGA_CUDA_ENABLED=true)
+endif(SAGA_CUDA_ENABLED)
 
 #
 # Installation of the examples

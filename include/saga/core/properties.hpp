@@ -2,6 +2,10 @@
 #include "saga/core/backend.hpp"
 #include "saga/core/fields.hpp"
 
+#if SAGA_CUDA_ENABLED
+#include "saga/core/cuda/vector.hpp"
+#endif
+
 #include <vector>
 
 namespace saga::core {
@@ -13,6 +17,13 @@ namespace saga::core {
   template <class T> struct container<T, saga::backend::CPU> {
     using type = std::vector<T>;
   };
+
+#if SAGA_CUDA_ENABLED
+  /// Container for the CUDA backend
+  template <class T> struct container<T, saga::backend::CUDA> {
+    using type = saga::core::cuda::vector<T, saga::core::cuda::host>;
+  };
+#endif
 
   /// Alias to get the type of a container for a given backend
   template <class T, backend Backend>

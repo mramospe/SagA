@@ -5,7 +5,6 @@
 
 #include <tuple>
 #include <type_traits>
-#include <vector>
 
 namespace saga::core {
 
@@ -79,14 +78,14 @@ namespace saga::core {
 
       value_type() = default;
       value_type(
-          saga::core::underlying_value_type_t<Field<TypeDescriptor>> &&... v)
+          saga::core::underlying_value_type_t<Field<TypeDescriptor>> &&...v)
           : base_type(
                 std::forward<
                     saga::core::underlying_value_type_t<Field<TypeDescriptor>>>(
                     v)...) {}
       value_type(
           saga::core::underlying_value_type_t<Field<TypeDescriptor>> const
-              &... v)
+              &...v)
           : base_type(v...) {}
       value_type(value_type const &) = default;
       value_type(value_type &&) = default;
@@ -135,9 +134,10 @@ namespace saga::core {
     public:
       /// Container type
       using container_type = container_with_fields;
+      using container_pointer_type = container_type *;
 
       /// Build the proxy from the container and the index
-      proxy_type(container_type *cont, std::size_t idx)
+      proxy_type(container_pointer_type cont, std::size_t idx)
           : m_ptr{cont}, m_idx{idx} {}
       /// The copy constructor assigns the internal container and index from the
       /// argument
@@ -204,7 +204,7 @@ namespace saga::core {
 
     protected:
       /// Pointer to the container
-      container_type *container_ptr() { return m_ptr; }
+      container_pointer_type container_ptr() { return m_ptr; }
       /// Container as a reference
       container_type &container() { return *m_ptr; }
       /// Container as a reference
@@ -213,7 +213,7 @@ namespace saga::core {
       std::size_t index() const { return m_idx; }
 
       /// Pointer to the container
-      container_type *m_ptr = nullptr;
+      container_pointer_type m_ptr = nullptr;
       /// Index in the container
       std::size_t m_idx = 0;
     };
@@ -226,6 +226,7 @@ namespace saga::core {
     public:
       /// Container type
       using container_type = container_with_fields;
+      using container_pointer_type = container_type *;
 
       friend class const_iterator_type;
 
@@ -304,7 +305,7 @@ namespace saga::core {
 
     protected:
       /// Pointer to the container
-      container_type *container_ptr() const { return m_ptr; }
+      container_pointer_type container_ptr() const { return m_ptr; }
       /// Container as a reference
       container_type const &container() const { return *m_ptr; }
       /// Current index this proxy points to
@@ -324,9 +325,10 @@ namespace saga::core {
     public:
       /// Container type
       using container_type = container_with_fields;
+      using container_pointer_type = container_type const *;
 
       /// Build the proxy from the container and the index
-      const_proxy_type(container_type const *cont, std::size_t idx)
+      const_proxy_type(container_pointer_type cont, std::size_t idx)
           : m_ptr{cont}, m_idx{idx} {}
       /// The copy constructor assigns the internal container and index from the
       /// argument
@@ -346,14 +348,14 @@ namespace saga::core {
 
     protected:
       /// Pointer to the container
-      container_type const *container_ptr() const { return m_ptr; }
+      container_pointer_type container_ptr() const { return m_ptr; }
       /// Container as a reference
       container_type const &container() const { return *m_ptr; }
       /// Current index this proxy points to
       std::size_t index() const { return m_idx; }
 
       /// Pointer to the container
-      container_type const *m_ptr = nullptr;
+      container_pointer_type m_ptr = nullptr;
       /// Index in the container
       std::size_t m_idx = 0;
     };
@@ -366,11 +368,12 @@ namespace saga::core {
     public:
       /// Container type
       using container_type = container_with_fields;
+      using container_pointer_type = container_type const *;
 
       friend class iterator_type;
 
       /// Build the proxy from the container and the index
-      const_iterator_type(container_type const *cont, std::size_t idx)
+      const_iterator_type(container_pointer_type cont, std::size_t idx)
           : m_ptr{cont}, m_idx{idx} {}
       const_iterator_type(const const_iterator_type &) = default;
       const_iterator_type(const_iterator_type &&) = default;
@@ -448,14 +451,14 @@ namespace saga::core {
 
     protected:
       /// Pointer to the container
-      container_type const *container_ptr() const { return m_ptr; }
+      container_pointer_type container_ptr() const { return m_ptr; }
       /// Container as a reference
       container_type const &container() const { return *m_ptr; }
       /// Current index this proxy points to
       std::size_t index() const { return m_idx; }
 
       /// Pointer to the container
-      container_type const *m_ptr = nullptr;
+      container_pointer_type m_ptr = nullptr;
       /// Index in the container
       std::size_t m_idx = 0;
     };

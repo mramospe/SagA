@@ -202,18 +202,15 @@ namespace saga {
 
       public:
         using container_type = particle_container;
+        using container_pointer_type = container_type *;
         using shape_type = container_type::shape_type;
 
-        proxy_type(container_type *cont, std::size_t idx)
+        proxy_type(container_pointer_type cont, std::size_t idx)
             : base_type::proxy_type(cont, idx) {}
         proxy_type(proxy_type &&other)
-            : base_type::proxy_type(
-                  static_cast<container_type *>(other.container_ptr()),
-                  other.index()) {}
+            : base_type::proxy_type(other.container_ptr(), other.index()) {}
         proxy_type(proxy_type const &other)
-            : base_type::proxy_type(
-                  static_cast<container_type const *>(other.container_ptr()),
-                  other.index()) {}
+            : base_type::proxy_type(other.container_ptr(), other.index()) {}
 
         proxy_type &operator=(proxy_type const &p) {
           base_type::proxy_type::operator=(p);
@@ -303,9 +300,10 @@ namespace saga {
 
       public:
         using container_type = particle_container;
+        using container_pointer_type = container_type *;
         using shape_type = container_type::shape_type;
 
-        iterator_type(container_type *cont, std::size_t idx)
+        iterator_type(container_pointer_type cont, std::size_t idx)
             : base_type::iterator_type(cont, idx) {}
         iterator_type(iterator_type &&) = default;
         iterator_type(iterator_type const &) = default;
@@ -315,12 +313,12 @@ namespace saga {
 
         proxy_type operator*() {
           return proxy_type{
-              static_cast<container_type *>(this->container_ptr()),
+              static_cast<container_pointer_type>(this->container_ptr()),
               this->index()};
         }
         const_proxy_type operator*() const {
           return const_proxy_type{
-              static_cast<container_type const *>(this->container_ptr()),
+              static_cast<container_pointer_type>(this->container_ptr()),
               this->index()};
         }
 
@@ -374,18 +372,17 @@ namespace saga {
       class const_proxy_type : public base_type::const_proxy_type {
       public:
         using container_type = particle_container;
+        using container_pointer_type = container_type const *;
         using shape_type = container_type::shape_type;
 
-        const_proxy_type(container_type const *cont, std::size_t idx)
+        const_proxy_type(container_pointer_type cont, std::size_t idx)
             : base_type::const_proxy_type(cont, idx) {}
         const_proxy_type(const_proxy_type &&other)
-            : base_type::const_proxy_type(
-                  static_cast<container_type const *>(other.container_ptr()),
-                  other.index()) {}
+            : base_type::const_proxy_type(other.container_ptr(),
+                                          other.index()) {}
         const_proxy_type(const_proxy_type const &other)
-            : base_type::const_proxy_type(
-                  static_cast<container_type const *>(other.container_ptr()),
-                  other.index()) {}
+            : base_type::const_proxy_type(other.container_ptr(),
+                                          other.index()) {}
 
         const_proxy_type &operator=(proxy_type const &p) {
           base_type::const_proxy_type::operator=(p);
@@ -438,9 +435,10 @@ namespace saga {
       class const_iterator_type : public base_type::const_iterator_type {
       public:
         using container_type = particle_container;
+        using container_pointer_type = container_type const *;
         using shape_type = container_type::shape_type;
 
-        const_iterator_type(container_type const *cont, std::size_t idx)
+        const_iterator_type(container_pointer_type cont, std::size_t idx)
             : base_type::const_iterator_type(cont, idx) {}
         const_iterator_type(const_iterator_type &&other) = default;
         const_iterator_type(const_iterator_type const &other) = default;
@@ -450,13 +448,13 @@ namespace saga {
 
         const_proxy_type operator*() {
           return const_proxy_type{
-              static_cast<container_type const *>(this->container_ptr()),
+              static_cast<container_pointer_type>(this->container_ptr()),
               this->index()};
         }
 
         const_proxy_type operator*() const {
           return const_proxy_type{
-              static_cast<container_type const *>(this->container_ptr()),
+              static_cast<container_pointer_type>(this->container_ptr()),
               this->index()};
         }
 

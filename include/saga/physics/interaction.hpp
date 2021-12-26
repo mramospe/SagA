@@ -29,13 +29,14 @@ namespace saga::physics {
 
     /// Evaluate the force for two objects
     template <class Proxy>
-    Output operator()(Proxy const &src, Proxy const &tgt) const {
+    __saga_core_function__ Output operator()(Proxy const &src,
+                                             Proxy const &tgt) const {
       return force(charge(src), src.template get<Property>()..., charge(tgt),
                    tgt.template get<Property>()...);
     }
 
     /// Evaluate the force given the two sets of properties
-    virtual Output force(
+    __saga_core_function__ virtual Output force(
         typename charge_type::float_type,
         typename Property<TypeDescriptor>::underlying_value_type...,
         typename charge_type::float_type,
@@ -65,7 +66,7 @@ namespace saga::physics {
 
     /// Construction from keyword arguments
     template <class... K>
-    central_force_non_relativistic(K &&... v)
+    central_force_non_relativistic(K &&...v)
         : interaction_base_type{},
           keywords_parser_base_type(
               std::make_tuple(
@@ -88,9 +89,12 @@ namespace saga::physics {
         typename saga::physics::forces<TypeDescriptor>::value_type;
 
     /// Evaluate the force
-    return_type force(float_type tgt_mass, float_type tgt_x, float_type tgt_y,
-                      float_type tgt_z, float_type src_mass, float_type src_x,
-                      float_type src_y, float_type src_z) const override {
+    __saga_core_function__ return_type force(float_type tgt_charge,
+                                             float_type tgt_x, float_type tgt_y,
+                                             float_type tgt_z,
+                                             float_type src_charge,
+                                             float_type src_x, float_type src_y,
+                                             float_type src_z) const override {
 
       float_type const dx = src_x - tgt_x;
       float_type const dy = src_y - tgt_y;
@@ -100,7 +104,7 @@ namespace saga::physics {
           dx * dx + dy * dy + dz * dz + this->template get<soften_factor>();
 
       float_type const tgt_force =
-          this->template get<field_constant>() * tgt_mass * src_mass / r2;
+          this->template get<field_constant>() * tgt_charge * src_charge / r2;
 
       float_type const r = std::sqrt(r2);
 

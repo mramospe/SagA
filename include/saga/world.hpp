@@ -1,8 +1,14 @@
 #pragma once
+#include "saga/core/loops.hpp"
 #include "saga/particle.hpp"
 #include "saga/physics/core.hpp"
 #include "saga/physics/force.hpp"
 #include "saga/physics/shape.hpp"
+
+#if SAGA_CUDA_ENABLED
+#include "saga/core/cuda/loops.hpp"
+#endif
+
 #include <functional>
 #include <variant>
 #include <vector>
@@ -85,7 +91,7 @@ namespace saga {
     std::enable_if_t<
         saga::physics::is_available_interaction_v<Interaction, Properties>,
         void>
-    add_interaction(Args &&... args) {
+    add_interaction(Args &&...args) {
       m_interactions.emplace_back(Interaction<TypeDescriptor>{args...});
     }
 
@@ -101,13 +107,6 @@ namespace saga {
 
       saga::physics::forces<TypeDescriptor> forces(m_particles.size());
 
-      auto integrate_position = [&delta_t](auto &p) -> void {
-        p.set_x(p.get_x() + p.get_px() / p.get_mass() * 0.5 * delta_t);
-        p.set_y(p.get_y() + p.get_py() / p.get_mass() * 0.5 * delta_t);
-        p.set_z(p.get_z() + p.get_pz() / p.get_mass() * 0.5 * delta_t);
-        p.set_t(p.get_t() + p.get_e() / p.get_mass() * 0.5 * delta_t);
-      };
-
       // execute the call-back functions at the begining of the execution
       for (auto f : m_call_back_functions)
         f(m_particles);
@@ -119,61 +118,25 @@ namespace saga {
           f = {0.f, 0.f, 0.f};
 
         // first estimation of the positions
-        for (auto p : m_particles)
-          integrate_position(p);
+        saga::core::integrate_position<TypeDescriptor::backend>::evaluate(
+            m_particles, delta_t);
 
         // check if with the final step we have collisions and handle them
         if (m_collision_handler)
           m_collision_handler(delta_t, m_particles);
 
         // place where the point-to-point interactions are evaluated
-        for (auto inter : m_interactions) {
-
+        for (auto inter : m_interactions)
           std::visit(
-              [&](auto &&arg) -> void {
-                for (auto i = 0u; i < m_particles.size(); ++i) {
-
-                  auto pi = m_particles[i];
-                  auto force_i = forces[i];
-
-                  for (auto j = i + 1; j < m_particles.size(); ++j) {
-
-                    auto pj = m_particles[j];
-                    auto force_j = forces[j];
-
-                    auto res = arg(pi, pj);
-
-                    force_i.set_x(force_i.get_x() + res.get_x());
-                    force_i.set_y(force_i.get_y() + res.get_y());
-                    force_i.set_z(force_i.get_z() + res.get_z());
-
-                    force_j.set_x(force_j.get_x() - res.get_x());
-                    force_j.set_y(force_j.get_y() - res.get_y());
-                    force_j.set_z(force_j.get_z() - res.get_z());
-                  }
-                }
+              [this, &forces](auto &&arg) -> void {
+                saga::core::fill_forces<TypeDescriptor::backend>::evaluate(
+                    forces, arg, m_particles);
               },
               inter);
-        }
 
         // integrate the momenta
-        for (auto i = 0u; i < m_particles.size(); ++i) {
-
-          auto particle = m_particles[i];
-          auto force = forces[i];
-
-          auto mass =
-              particle.get_mass(); // whatever we do, we must preserve the mass
-
-          // momenta
-          particle.set_momenta_and_mass(
-              particle.get_px() + force.get_x() * delta_t,
-              particle.get_py() + force.get_y() * delta_t,
-              particle.get_pz() + force.get_z() * delta_t, mass);
-
-          // integrate the positions
-          integrate_position(particle);
-        }
+        saga::core::integrate_momenta_and_position<
+            TypeDescriptor::backend>::evaluate(m_particles, forces, delta_t);
 
         // call-back functions
         for (auto f : m_call_back_functions)
@@ -195,7 +158,7 @@ namespace saga {
 
     /// Add a new interaction to the world
     template <template <class> class CollisionHandler, class... Args>
-    void set_collision_handler(Args &&... args) {
+    void set_collision_handler(Args &&...args) {
       m_collision_handler = CollisionHandler<TypeDescriptor>(args...);
     }
 
