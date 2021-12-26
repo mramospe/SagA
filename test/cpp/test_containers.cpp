@@ -3,12 +3,12 @@
 
 // Alias functions to test a container of forces
 saga::test::errors test_forces_container() {
-  return saga::test::test_container<saga::physics::forces<saga::cpu::sf>>();
+  return saga::test::test_container<saga::core::forces<saga::cpu::sf>>();
 }
 
 saga::test::errors test_forces_proxy() {
 
-  using container_of_forces = saga::physics::forces<saga::cpu::sf>;
+  using container_of_forces = saga::core::forces<saga::cpu::sf>;
 
   auto errors = saga::test::test_iterator<container_of_forces>();
 
@@ -22,7 +22,7 @@ saga::test::errors test_forces_proxy() {
 }
 
 saga::test::errors test_forces_value() {
-  return saga::test::test_value<saga::physics::forces<saga::cpu::sf>>();
+  return saga::test::test_value<saga::core::forces<saga::cpu::sf>>();
 }
 
 // Alias functions to test a container of particles

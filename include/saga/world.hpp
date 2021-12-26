@@ -1,8 +1,8 @@
 #pragma once
+#include "saga/core/force.hpp"
 #include "saga/core/loops.hpp"
 #include "saga/particle.hpp"
 #include "saga/physics/core.hpp"
-#include "saga/physics/force.hpp"
 #include "saga/physics/shape.hpp"
 
 #if SAGA_CUDA_ENABLED
@@ -105,7 +105,7 @@ namespace saga {
     /// Run a series of steps using the given interval of time
     void run(std::size_t steps, float_type delta_t = 0.001) const {
 
-      saga::physics::forces<TypeDescriptor> forces(m_particles.size());
+      saga::core::forces<TypeDescriptor> forces(m_particles.size());
 
       // execute the call-back functions at the begining of the execution
       for (auto f : m_call_back_functions)

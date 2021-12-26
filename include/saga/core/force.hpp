@@ -1,10 +1,10 @@
 #pragma once
 #include "saga/core/container.hpp"
 #include "saga/core/fields.hpp"
+#include "saga/core/properties.hpp"
 #include "saga/core/types.hpp"
-#include "saga/physics/quantities.hpp"
 
-namespace saga::physics {
+namespace saga::core {
 
   /*!\brief Container of forces
    */
@@ -372,4 +372,4 @@ namespace saga::physics {
     /// End of the container
     auto cend() const { return const_iterator_type(this, this->size()); }
   };
-} // namespace saga::physics
+} // namespace saga::core

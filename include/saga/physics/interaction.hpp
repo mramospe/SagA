@@ -1,8 +1,8 @@
 #pragma once
+#include "saga/core/force.hpp"
 #include "saga/core/keywords.hpp"
 #include "saga/core/types.hpp"
 #include "saga/physics/charge.hpp"
-#include "saga/physics/force.hpp"
 #include "saga/physics/quantities.hpp"
 
 #include <cmath>
@@ -50,7 +50,7 @@ namespace saga::physics {
   struct central_force_non_relativistic
       : public saga::physics::interaction<
             TypeDescriptor, Charge,
-            typename saga::physics::forces<TypeDescriptor>::value_type,
+            typename saga::core::forces<TypeDescriptor>::value_type,
             property::x, property::y, property::z>,
         public saga::core::keywords::keywords_parser<
             TypeDescriptor, saga::core::keywords::required<field_constant>,
@@ -58,7 +58,7 @@ namespace saga::physics {
 
     using interaction_base_type = saga::physics::interaction<
         TypeDescriptor, Charge,
-        typename saga::physics::forces<TypeDescriptor>::value_type, property::x,
+        typename saga::core::forces<TypeDescriptor>::value_type, property::x,
         property::y, property::z>;
     using keywords_parser_base_type = saga::core::keywords::keywords_parser<
         TypeDescriptor, saga::core::keywords::required<field_constant>,
@@ -85,8 +85,7 @@ namespace saga::physics {
     /// Floating-point type
     using float_type = typename TypeDescriptor::float_type;
     /// Value returned by the functor
-    using return_type =
-        typename saga::physics::forces<TypeDescriptor>::value_type;
+    using return_type = typename saga::core::forces<TypeDescriptor>::value_type;
 
     /// Evaluate the force
     __saga_core_function__ return_type force(float_type tgt_charge,

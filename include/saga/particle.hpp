@@ -30,7 +30,7 @@ namespace saga {
     using container_with_fields_from_properties_and_shape_t =
         container_with_fields_from_properties_t<
             TypeDescriptor,
-            saga::append_properties_t<
+            saga::core::append_properties_t<
                 typename Shape<TypeDescriptor>::properties, Property...>>;
 
     /// Base type for a container of particles
