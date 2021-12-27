@@ -14,7 +14,7 @@ namespace saga::core::cuda {
     }
   } // namespace detail
 
-  template <class Particles, class Function, class... Args>
+  template <class Particles, class Forces, class Function, class... Args>
   __global__ void
   apply_contiguous_function_inplace(Particles &particles, Forces const &forces,
                                     Function &&function, Args &&...args) {

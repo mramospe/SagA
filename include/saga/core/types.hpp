@@ -64,21 +64,19 @@ namespace saga {
 
     /// Represent the given type descriptor but with a different backend
     template <saga::backend NewBackend, class TypeDescriptor>
-    struct switch_type_descriptor_backend;
+    struct change_type_descriptor_backend;
 
     template <backend NewBackend, backend Backend, class FloatType,
               class IntType>
-    struct switch_type_descriptor_backend<
+    struct change_type_descriptor_backend<
         NewBackend, saga::core::type_descriptor<Backend, FloatType, IntType>> {
-
-      static_assert(NewBackend != Backend, "Switching to the same backend");
 
       using type = saga::core::type_descriptor<NewBackend, FloatType, IntType>;
     };
 
     template <saga::backend NewBackend, class TypeDescriptor>
-    using switch_type_descriptor_backend_t =
-        typename switch_type_descriptor_backend<NewBackend,
+    using change_type_descriptor_backend_t =
+        typename change_type_descriptor_backend<NewBackend,
                                                 TypeDescriptor>::type;
 
     /// Check if the input type is a valid type descriptor

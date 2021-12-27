@@ -3,6 +3,10 @@
 
 namespace saga::core {
 
+  /// Collection of template classes with a single template argument
+  template <template <class> class... T>
+  struct templates_with_single_template_argument {};
+
   /// Get the index of the type in the list of types
   template <class Match, class... T> struct index;
 

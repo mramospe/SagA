@@ -28,16 +28,21 @@ namespace saga {
   class world {
 
   public:
+    /// Type descriptor
+    using type_descriptor = TypeDescriptor;
+    /// Properties
+    using properties_type = Properties;
     /// Floating-point type used
-    using float_type = typename TypeDescriptor::float_type;
+    using float_type = typename type_descriptor::float_type;
     /// Type of the collection of functions which act as proxies for
     /// interactions
     using interactions_type =
-        saga::physics::interactions_variant<TypeDescriptor, Properties>;
+        saga::physics::interactions_variant<type_descriptor, properties_type>;
     /// Type of the functions which act as proxies for interactions
     using interaction_type = typename interactions_type::value_type;
     /// Type of the collection of particles
-    using particles_type = saga::particles<TypeDescriptor, Shape, Properties>;
+    using particles_type =
+        saga::particles<type_descriptor, Shape, properties_type>;
     /// Type of the collection of functions called at the end of a step
     using call_back_vector_type =
         std::vector<std::function<void(particles_type const &)>>;
@@ -69,30 +74,31 @@ namespace saga {
     void configure(configuration_function_type &&f) { f(m_particles); }
 
     /// Add a new interaction to the world
-    template <class Interaction>
+    template <template <class> class Interaction>
     std::enable_if_t<
-        saga::physics::is_available_interaction_v<Interaction, Properties>,
+        saga::physics::is_available_interaction_v<Interaction, properties_type>,
         void>
-    add_interaction(Interaction &&interaction) {
-      m_interactions.emplace_back(std::forward<Interaction>(interaction));
+    add_interaction(Interaction<type_descriptor> &&interaction) {
+      m_interactions.push_back(
+          std::forward<Interaction<type_descriptor>>(interaction));
     }
 
     /// Add a new interaction to the world
-    template <class Interaction>
+    template <template <class> class Interaction>
     std::enable_if_t<
-        saga::physics::is_available_interaction_v<Interaction, Properties>,
+        saga::physics::is_available_interaction_v<Interaction, properties_type>,
         void>
-    add_interaction(const Interaction &interaction) {
-      m_interactions.emplace_back(interaction);
+    add_interaction(const Interaction<type_descriptor> &interaction) {
+      m_interactions.push_back(interaction);
     }
 
     /// Add a new interaction to the world
     template <template <class> class Interaction, class... Args>
     std::enable_if_t<
-        saga::physics::is_available_interaction_v<Interaction, Properties>,
+        saga::physics::is_available_interaction_v<Interaction, properties_type>,
         void>
     add_interaction(Args &&...args) {
-      m_interactions.emplace_back(Interaction<TypeDescriptor>{args...});
+      m_interactions.push_back(Interaction<type_descriptor>{args...});
     }
 
     /*!\brief Retrieve the set of particles
@@ -105,7 +111,7 @@ namespace saga {
     /// Run a series of steps using the given interval of time
     void run(std::size_t steps, float_type delta_t = 0.001) const {
 
-      saga::core::forces<TypeDescriptor> forces(m_particles.size());
+      saga::core::forces<type_descriptor> forces(m_particles.size());
 
       // execute the call-back functions at the begining of the execution
       for (auto f : m_call_back_functions)
@@ -118,7 +124,7 @@ namespace saga {
           f = {0.f, 0.f, 0.f};
 
         // first estimation of the positions
-        saga::core::integrate_position<TypeDescriptor::backend>::evaluate(
+        saga::core::integrate_position<type_descriptor::backend>::evaluate(
             m_particles, delta_t);
 
         // check if with the final step we have collisions and handle them
@@ -129,14 +135,14 @@ namespace saga {
         for (auto inter : m_interactions)
           std::visit(
               [this, &forces](auto &&arg) -> void {
-                saga::core::fill_forces<TypeDescriptor::backend>::evaluate(
+                saga::core::fill_forces<type_descriptor::backend>::evaluate(
                     forces, arg, m_particles);
               },
               inter);
 
         // integrate the momenta
         saga::core::integrate_momenta_and_position<
-            TypeDescriptor::backend>::evaluate(m_particles, forces, delta_t);
+            type_descriptor::backend>::evaluate(m_particles, forces, delta_t);
 
         // call-back functions
         for (auto f : m_call_back_functions)
@@ -159,7 +165,7 @@ namespace saga {
     /// Add a new interaction to the world
     template <template <class> class CollisionHandler, class... Args>
     void set_collision_handler(Args &&...args) {
-      m_collision_handler = CollisionHandler<TypeDescriptor>(args...);
+      m_collision_handler = CollisionHandler<type_descriptor>(args...);
     }
 
   protected:

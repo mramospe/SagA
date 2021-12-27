@@ -1,12 +1,12 @@
 #pragma once
 #include <stdexcept>
 #include <string>
-#include <types>
+#include <type_traits>
 #include <vector>
 
 #define SAGA_SIZE_IN_MEGABYTES 1048576
 
-namespace saga::core::cuda {
+namespace saga {
 
   /// Vector class
   template <class T> class vector {
@@ -80,7 +80,7 @@ namespace saga::core::cuda {
   };
 
   /// Return a vector whose memory is allocated on the device
-  template <class T> auto to_device(std::vector<T> const &other) const {
+  template <class T> auto to_device(std::vector<T> const &other) {
 
     vector<T> out(other.size());
 
@@ -93,7 +93,7 @@ namespace saga::core::cuda {
   }
 
   /// Return a vector whose memory is allocated on the host
-  template <class T> auto to_host(vector<T> const &other) const {
+  template <class T> auto to_host(vector<T> const &other) {
 
     std::vector<T> out(other.size());
 
@@ -104,4 +104,4 @@ namespace saga::core::cuda {
 
     return out;
   }
-} // namespace saga::core::cuda
+} // namespace saga

@@ -1,5 +1,4 @@
 #pragma once
-#include "saga/core/fields.hpp"
 #include "saga/core/properties.hpp"
 #include "saga/core/utils.hpp"
 

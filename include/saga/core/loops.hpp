@@ -54,7 +54,8 @@ namespace saga::core {
 
   template <> struct integrate_position<backend::CUDA> {
     template <class Particles, class FloatType>
-    static void evaluate(Particles &particles, FloatType delta_t) {
+    static void evaluate([[maybe_unused]] Particles &particles,
+                         [[maybe_unused]] FloatType delta_t) {
 #if SAGA_CUDA_ENABLED
       saga::core::cuda::apply_simple_function_inplace(
           particles, &detail::integrate_position, delta_t);
@@ -106,8 +107,9 @@ namespace saga::core {
   template <> struct fill_forces<backend::CUDA> {
 
     template <class Forces, class Function, class Particles>
-    static void evaluate(Forces &forces, Function &&function,
-                         Particles const &particles) {
+    static void evaluate([[maybe_unused]] Forces &forces,
+                         [[maybe_unused]] Function &&function,
+                         [[maybe_unused]] Particles const &particles) {
 
 #if SAGA_CUDA_ENABLED
       auto N = particles.size();
@@ -133,8 +135,8 @@ namespace saga::core {
   template <> struct integrate_momenta_and_position<backend::CPU> {
 
     template <class Particles, class Forces, class FloatType>
-    static void evaluate(Particles &particles, Forces const &forces,
-                         FloatType delta_t) {
+    static __saga_core_function__ void
+    evaluate(Particles &particles, Forces const &forces, FloatType delta_t) {
 
       for (auto i = 0u; i < particles.size(); ++i) {
         detail::integrate_momenta_and_position(particles[i], forces[i],
@@ -146,8 +148,10 @@ namespace saga::core {
   template <> struct integrate_momenta_and_position<backend::CUDA> {
 
     template <class Particles, class Forces, class FloatType>
-    static void evaluate(Particles &particles, Forces const &forces,
-                         FloatType delta_t) {
+    static __saga_core_function__ void
+    evaluate([[maybe_unused]] Particles &particles,
+             [[maybe_unused]] Forces const &forces,
+             [[maybe_unused]] FloatType delta_t) {
 
 #if SAGA_CUDA_ENABLED
       auto N = particles.size();

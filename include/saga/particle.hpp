@@ -1,6 +1,5 @@
 #pragma once
 #include "saga/core/container.hpp"
-#include "saga/core/fields.hpp"
 #include "saga/core/types.hpp"
 #include "saga/physics/quantities.hpp"
 #include "saga/physics/shape.hpp"
@@ -57,157 +56,185 @@ namespace saga {
         : public particle_container_base_type<TypeDescriptor, Shape,
                                               Property...> {
     public:
+      /// Type descriptor
+      using type_descriptor = TypeDescriptor;
       /// Base type
       using base_type =
-          particle_container_base_type<TypeDescriptor, Shape, Property...>;
+          particle_container_base_type<type_descriptor, Shape, Property...>;
       /// Constructors inherited from the base class
       using base_type::base_type;
       /// Shape type
-      using shape_type = Shape<TypeDescriptor>;
-
+      using shape_type = Shape<type_descriptor>;
       /// Floating-point type used in the calculations
-      using float_type = typename TypeDescriptor::float_type;
-
+      using float_type = typename type_descriptor::float_type;
       /// Alias to a type where the backend has been switched to a one different
       /// from the previous
       template <saga::backend NewBackend>
       using type_with_backend =
-          particle_container<saga::core::switch_type_descriptor_backend_t<
-                                 NewBackend, TypeDescriptor>,
+          particle_container<saga::core::change_type_descriptor_backend_t<
+                                 NewBackend, type_descriptor>,
                              Shape, saga::properties<Property...>>;
 
 #if SAGA_CUDA_ENABLED
       /// Return this container with the data allocated in the device
-      std::enable_if_t<(TypeDescriptor::backend == saga::backend::CPU),
-                       type_with_backend<saga::backend::CUDA>>
-      to_device() const {
-        return base_class::to_device();
-      }
-
-      /// Return this container with the data allocated in the host
-      std::enable_if_t<(TypeDescriptor::backend == saga::backend::CUDA),
-                       type_with_backend<saga::backend::CPU>>
-      to_host() const {
-        return base_class::to_host();
+      template <saga::backend NewBackend>
+      type_with_backend<NewBackend> to_backend() const {
+        return base_type::to_backend<NewBackend>();
       }
 #endif
 
       auto const &get_x() const {
         return this->template get<saga::property::x>();
       }
-      void set_x(std::size_t i, float_type v) {
+      __saga_core_function__ void set_x(std::size_t i, float_type v) {
         this->template set<saga::property::x>(i, v);
       }
       auto const &get_y() const {
         return this->template get<saga::property::y>();
       }
-      void set_y(std::size_t i, float_type v) {
+      __saga_core_function__ void set_y(std::size_t i, float_type v) {
         this->template set<saga::property::y>(i, v);
       }
       auto const &get_z() const {
         return this->template get<saga::property::z>();
       }
-      void set_z(std::size_t i, float_type v) {
+      __saga_core_function__ void set_z(std::size_t i, float_type v) {
         this->template set<saga::property::z>(i, v);
       }
       auto const &get_t() const {
         return this->template get<saga::property::t>();
       }
-      void set_t(std::size_t i, float_type v) {
+      __saga_core_function__ void set_t(std::size_t i, float_type v) {
         this->template set<saga::property::t>(i, v);
       }
       auto const &get_px() const {
         return this->template get<saga::property::px>();
       }
-      void set_px(std::size_t i, float_type v) {
+      __saga_core_function__ void set_px(std::size_t i, float_type v) {
         this->template set<saga::property::px>(i, v);
       }
       auto const &get_py() const {
         return this->template get<saga::property::py>();
       }
-      void set_py(std::size_t i, float_type v) {
+      __saga_core_function__ void set_py(std::size_t i, float_type v) {
         this->template set<saga::property::py>(i, v);
       }
       auto const &get_pz() const {
         return this->template get<saga::property::pz>();
       }
-      void set_pz(std::size_t i, float_type v) {
+      __saga_core_function__ void set_pz(std::size_t i, float_type v) {
         this->template set<saga::property::pz>(i, v);
       }
       auto const &get_e() const {
         return this->template get<saga::property::e>();
       }
-      void set_e(std::size_t i, float_type v) {
+      __saga_core_function__ void set_e(std::size_t i, float_type v) {
         this->template set<saga::property::e>(i, v);
       }
 
+      // forward declarations
       class value_type;
-      class iterator_type;
       class proxy_type;
-      class const_iterator_type;
       class const_proxy_type;
 
-      class value_type : public base_type::value_type {
+      class value_type : public saga::core::value<particle_container> {
 
       public:
-        using base_type::value_type::value_type;
+        using base_type = saga::core::value<particle_container>;
         using shape_type = particle_container::shape_type;
 
-        value_type &operator=(proxy_type const &p) {
-          base_type::value_type::operator=(p);
+        using base_type::base_type;
+
+        __saga_core_function__ value_type &operator=(proxy_type const &p) {
+          base_type::operator=(p);
           return *this;
         }
-        value_type &operator=(const_proxy_type const &p) {
-          base_type::value_type::operator=(p);
+        __saga_core_function__ value_type &
+        operator=(const_proxy_type const &p) {
+          base_type::operator=(p);
           return *this;
         }
 
-        auto const &get_x() const {
+        __saga_core_function__ auto const &get_x() const {
           return this->template get<saga::property::x>();
         }
-        auto &get_x() { return this->template get<saga::property::x>(); }
-        void set_x(float_type v) { this->template set<saga::property::x>(v); }
-        auto const &get_y() const {
+        __saga_core_function__ auto &get_x() {
+          return this->template get<saga::property::x>();
+        }
+        __saga_core_function__ void set_x(float_type v) {
+          this->template set<saga::property::x>(v);
+        }
+        __saga_core_function__ auto const &get_y() const {
           return this->template get<saga::property::y>();
         }
-        auto &get_y() { return this->template get<saga::property::y>(); }
-        void set_y(float_type v) { this->template set<saga::property::y>(v); }
-        auto const &get_z() const {
+        __saga_core_function__ auto &get_y() {
+          return this->template get<saga::property::y>();
+        }
+        __saga_core_function__ void set_y(float_type v) {
+          this->template set<saga::property::y>(v);
+        }
+        __saga_core_function__ auto const &get_z() const {
           return this->template get<saga::property::z>();
         }
-        auto &get_z() { return this->template get<saga::property::z>(); }
-        void set_z(float_type v) { this->template set<saga::property::z>(v); }
-        auto const &get_t() const {
+        __saga_core_function__ auto &get_z() {
+          return this->template get<saga::property::z>();
+        }
+        __saga_core_function__ void set_z(float_type v) {
+          this->template set<saga::property::z>(v);
+        }
+        __saga_core_function__ auto const &get_t() const {
           return this->template get<saga::property::t>();
         }
-        auto &get_t() { return this->template get<saga::property::t>(); }
-        void set_t(float_type v) { this->template set<saga::property::t>(v); }
-        auto const &get_px() const {
+        __saga_core_function__ auto &get_t() {
+          return this->template get<saga::property::t>();
+        }
+        __saga_core_function__ void set_t(float_type v) {
+          this->template set<saga::property::t>(v);
+        }
+        __saga_core_function__ auto const &get_px() const {
           return this->template get<saga::property::px>();
         }
-        auto &get_px() { return this->template get<saga::property::px>(); }
-        void set_px(float_type v) { this->template set<saga::property::px>(v); }
-        auto const &get_py() const {
+        __saga_core_function__ auto &get_px() {
+          return this->template get<saga::property::px>();
+        }
+        __saga_core_function__ void set_px(float_type v) {
+          this->template set<saga::property::px>(v);
+        }
+        __saga_core_function__ auto const &get_py() const {
           return this->template get<saga::property::py>();
         }
-        auto &get_py() { return this->template get<saga::property::py>(); }
-        void set_py(float_type v) { this->template set<saga::property::py>(v); }
-        auto const &get_pz() const {
+        __saga_core_function__ auto &get_py() {
+          return this->template get<saga::property::py>();
+        }
+        __saga_core_function__ void set_py(float_type v) {
+          this->template set<saga::property::py>(v);
+        }
+        __saga_core_function__ auto const &get_pz() const {
           return this->template get<saga::property::pz>();
         }
-        auto &get_pz() { return this->template get<saga::property::pz>(); }
-        void set_pz(float_type v) { this->template set<saga::property::pz>(v); }
-        auto const &get_e() const {
+        __saga_core_function__ auto &get_pz() {
+          return this->template get<saga::property::pz>();
+        }
+        __saga_core_function__ void set_pz(float_type v) {
+          this->template set<saga::property::pz>(v);
+        }
+        __saga_core_function__ auto const &get_e() const {
           return this->template get<saga::property::e>();
         }
-        auto &get_e() { return this->template get<saga::property::e>(); }
-        void set_e(float_type v) { this->template set<saga::property::e>(v); }
-        auto get_mass() const {
+        __saga_core_function__ auto &get_e() {
+          return this->template get<saga::property::e>();
+        }
+        __saga_core_function__ void set_e(float_type v) {
+          this->template set<saga::property::e>(v);
+        }
+        __saga_core_function__ auto get_mass() const {
           return std::sqrt(std::abs(get_e() * get_e() - get_px() * get_px() -
                                     get_py() * get_py() - get_pz() * get_pz()));
         }
-        void set_momenta_and_mass(float_type px, float_type py, float_type pz,
-                                  float_type mass) {
+        __saga_core_function__ void set_momenta_and_mass(float_type px,
+                                                         float_type py,
+                                                         float_type pz,
+                                                         float_type mass) {
           set_px(px);
           set_py(py);
           set_pz(pz);
@@ -215,97 +242,111 @@ namespace saga {
         }
       };
 
-      class proxy_type : public base_type::proxy_type {
+      class proxy_type : public saga::core::proxy<particle_container> {
 
       public:
+        using base_type = saga::core::proxy<particle_container>;
         using container_type = particle_container;
         using container_pointer_type = container_type *;
         using shape_type = container_type::shape_type;
 
-        proxy_type(container_pointer_type cont, std::size_t idx)
-            : base_type::proxy_type(cont, idx) {}
-        proxy_type(proxy_type &&other)
-            : base_type::proxy_type(other.container_ptr(), other.index()) {}
-        proxy_type(proxy_type const &other)
-            : base_type::proxy_type(other.container_ptr(), other.index()) {}
+        using base_type::base_type;
 
-        proxy_type &operator=(proxy_type const &p) {
-          base_type::proxy_type::operator=(p);
+        __saga_core_function__ proxy_type &operator=(proxy_type const &p) {
+          base_type::operator=(p);
           return *this;
         }
 
-        proxy_type &operator=(proxy_type &&p) {
-          base_type::proxy_type::operator=(p);
+        __saga_core_function__ proxy_type &operator=(proxy_type &&p) {
+          base_type::operator=(p);
           return *this;
         }
 
-        proxy_type &operator=(value_type const &p) {
-          base_type::proxy_type::operator=(p);
+        __saga_core_function__ proxy_type &operator=(value_type const &p) {
+          base_type::operator=(p);
           return *this;
         }
 
-        auto const &get_x() const {
+        __saga_core_function__ auto const &get_x() const {
           return this->template get<saga::property::x>();
         }
-        auto &get_x() { return this->template get<saga::property::x>(); }
-        void set_x(float_type v) {
+        __saga_core_function__ auto &get_x() {
+          return this->template get<saga::property::x>();
+        }
+        __saga_core_function__ void set_x(float_type v) {
           this->container().template set<saga::property::x>(this->index(), v);
         }
-        auto const &get_y() const {
+        __saga_core_function__ auto const &get_y() const {
           return this->template get<saga::property::y>();
         }
-        auto &get_y() { return this->template get<saga::property::y>(); }
-        void set_y(float_type v) {
+        __saga_core_function__ auto &get_y() {
+          return this->template get<saga::property::y>();
+        }
+        __saga_core_function__ void set_y(float_type v) {
           this->container().template set<saga::property::y>(this->index(), v);
         }
-        auto const &get_z() const {
+        __saga_core_function__ auto const &get_z() const {
           return this->template get<saga::property::z>();
         }
-        auto &get_z() { return this->template get<saga::property::z>(); }
-        void set_z(float_type v) {
+        __saga_core_function__ auto &get_z() {
+          return this->template get<saga::property::z>();
+        }
+        __saga_core_function__ void set_z(float_type v) {
           this->container().template set<saga::property::z>(this->index(), v);
         }
-        auto const &get_t() const {
+        __saga_core_function__ auto const &get_t() const {
           return this->template get<saga::property::t>();
         }
-        auto &get_t() { return this->template get<saga::property::t>(); }
-        void set_t(float_type v) {
+        __saga_core_function__ auto &get_t() {
+          return this->template get<saga::property::t>();
+        }
+        __saga_core_function__ void set_t(float_type v) {
           this->container().template set<saga::property::t>(this->index(), v);
         }
-        auto const &get_px() const {
+        __saga_core_function__ auto const &get_px() const {
           return this->template get<saga::property::px>();
         }
-        auto &get_px() { return this->template get<saga::property::px>(); }
-        void set_px(float_type v) {
+        __saga_core_function__ auto &get_px() {
+          return this->template get<saga::property::px>();
+        }
+        __saga_core_function__ void set_px(float_type v) {
           this->container().template set<saga::property::px>(this->index(), v);
         }
-        auto const &get_py() const {
+        __saga_core_function__ auto const &get_py() const {
           return this->template get<saga::property::py>();
         }
-        auto &get_py() { return this->template get<saga::property::py>(); }
-        void set_py(float_type v) {
+        __saga_core_function__ auto &get_py() {
+          return this->template get<saga::property::py>();
+        }
+        __saga_core_function__ void set_py(float_type v) {
           this->container().template set<saga::property::py>(this->index(), v);
         }
-        auto const &get_pz() const {
+        __saga_core_function__ auto const &get_pz() const {
           return this->template get<saga::property::pz>();
         }
-        auto &get_pz() { return this->template get<saga::property::pz>(); }
-        void set_pz(float_type v) {
+        __saga_core_function__ auto &get_pz() {
+          return this->template get<saga::property::pz>();
+        }
+        __saga_core_function__ void set_pz(float_type v) {
           this->container().template set<saga::property::pz>(this->index(), v);
         }
-        auto const &get_e() const {
+        __saga_core_function__ auto const &get_e() const {
           return this->template get<saga::property::e>();
         }
-        auto &get_e() { return this->template get<saga::property::e>(); }
-        void set_e(float_type v) {
+        __saga_core_function__ auto &get_e() {
+          return this->template get<saga::property::e>();
+        }
+        __saga_core_function__ void set_e(float_type v) {
           this->container().template set<saga::property::e>(this->index(), v);
         }
-        auto get_mass() const {
+        __saga_core_function__ auto get_mass() const {
           return std::sqrt(std::abs(get_e() * get_e() - get_px() * get_px() -
                                     get_py() * get_py() - get_pz() * get_pz()));
         }
-        void set_momenta_and_mass(float_type px, float_type py, float_type pz,
-                                  float_type mass) {
+        __saga_core_function__ void set_momenta_and_mass(float_type px,
+                                                         float_type py,
+                                                         float_type pz,
+                                                         float_type mass) {
           set_px(px);
           set_py(py);
           set_pz(pz);
@@ -313,220 +354,92 @@ namespace saga {
         }
       };
 
-      class iterator_type : public base_type::iterator_type {
-
+      class const_proxy_type
+          : public saga::core::const_proxy<particle_container> {
       public:
-        using container_type = particle_container;
-        using container_pointer_type = container_type *;
-        using shape_type = container_type::shape_type;
-
-        iterator_type(container_pointer_type cont, std::size_t idx)
-            : base_type::iterator_type(cont, idx) {}
-        iterator_type(iterator_type &&) = default;
-        iterator_type(iterator_type const &) = default;
-
-        iterator_type &operator=(iterator_type const &) = default;
-        iterator_type &operator=(iterator_type &&) = default;
-
-        proxy_type operator*() {
-          return proxy_type{
-              static_cast<container_pointer_type>(this->container_ptr()),
-              this->index()};
-        }
-        const_proxy_type operator*() const {
-          return const_proxy_type{
-              static_cast<container_pointer_type>(this->container_ptr()),
-              this->index()};
-        }
-
-        iterator_type &operator++() {
-          base_type::iterator_type::operator++();
-          return *this;
-        }
-
-        iterator_type operator++(int) {
-
-          auto copy = *this;
-          base_type::iterator_type::operator++();
-          return copy;
-        }
-
-        iterator_type &operator--() {
-          base_type::iterator_type::operator--();
-          return *this;
-        }
-
-        iterator_type operator--(int) {
-
-          auto copy = *this;
-          base_type::iterator_type::operator--();
-          return copy;
-        }
-
-        iterator_type &operator+=(int i) {
-          base_type::iterator_type::operator+=(i);
-          return *this;
-        }
-
-        iterator_type operator-=(int i) {
-          base_type::iterator_type::operator-=(i);
-          return *this;
-        }
-
-        iterator_type operator+(int i) {
-          auto copy = *this;
-          copy += i;
-          return copy;
-        }
-
-        iterator_type operator-(int i) {
-          auto copy = *this;
-          copy -= i;
-          return copy;
-        }
-      };
-
-      class const_proxy_type : public base_type::const_proxy_type {
-      public:
+        using base_type = saga::core::const_proxy<particle_container>;
         using container_type = particle_container;
         using container_pointer_type = container_type const *;
         using shape_type = container_type::shape_type;
 
-        const_proxy_type(container_pointer_type cont, std::size_t idx)
-            : base_type::const_proxy_type(cont, idx) {}
-        const_proxy_type(const_proxy_type &&other)
-            : base_type::const_proxy_type(other.container_ptr(),
-                                          other.index()) {}
-        const_proxy_type(const_proxy_type const &other)
-            : base_type::const_proxy_type(other.container_ptr(),
-                                          other.index()) {}
+        using base_type::base_type;
 
-        const_proxy_type &operator=(proxy_type const &p) {
-          base_type::const_proxy_type::operator=(p);
+        __saga_core_function__ const_proxy_type &
+        operator=(proxy_type const &p) {
+          base_type::operator=(p);
           return *this;
         }
 
-        const_proxy_type &operator=(proxy_type &&p) {
-          base_type::const_proxy_type::operator=(p);
+        __saga_core_function__ const_proxy_type &operator=(proxy_type &&p) {
+          base_type::operator=(p);
           return *this;
         }
 
-        auto const &get_x() const {
+        __saga_core_function__ auto const &get_x() const {
           return this->template get<saga::property::x>();
         }
-        auto &get_x() { return this->template get<saga::property::x>(); }
-        auto const &get_y() const {
+        __saga_core_function__ auto &get_x() {
+          return this->template get<saga::property::x>();
+        }
+        __saga_core_function__ auto const &get_y() const {
           return this->template get<saga::property::y>();
         }
-        auto &get_y() { return this->template get<saga::property::y>(); }
-        auto const &get_z() const {
+        __saga_core_function__ auto &get_y() {
+          return this->template get<saga::property::y>();
+        }
+        __saga_core_function__ auto const &get_z() const {
           return this->template get<saga::property::z>();
         }
-        auto &get_z() { return this->template get<saga::property::z>(); }
-        auto const &get_t() const {
+        __saga_core_function__ auto &get_z() {
+          return this->template get<saga::property::z>();
+        }
+        __saga_core_function__ auto const &get_t() const {
           return this->template get<saga::property::t>();
         }
-        auto &get_t() { return this->template get<saga::property::t>(); }
-        auto const &get_px() const {
+        __saga_core_function__ auto &get_t() {
+          return this->template get<saga::property::t>();
+        }
+        __saga_core_function__ auto const &get_px() const {
           return this->template get<saga::property::px>();
         }
-        auto &get_px() { return this->template get<saga::property::px>(); }
-        auto const &get_py() const {
+        __saga_core_function__ auto &get_px() {
+          return this->template get<saga::property::px>();
+        }
+        __saga_core_function__ auto const &get_py() const {
           return this->template get<saga::property::py>();
         }
-        auto &get_py() { return this->template get<saga::property::py>(); }
-        auto const &get_pz() const {
+        __saga_core_function__ auto &get_py() {
+          return this->template get<saga::property::py>();
+        }
+        __saga_core_function__ auto const &get_pz() const {
           return this->template get<saga::property::pz>();
         }
-        auto &get_pz() { return this->template get<saga::property::pz>(); }
-        auto const &get_e() const {
+        __saga_core_function__ auto &get_pz() {
+          return this->template get<saga::property::pz>();
+        }
+        __saga_core_function__ auto const &get_e() const {
           return this->template get<saga::property::e>();
         }
-        auto &get_e() { return this->template get<saga::property::e>(); }
-        auto get_mass() const {
+        __saga_core_function__ auto &get_e() {
+          return this->template get<saga::property::e>();
+        }
+        __saga_core_function__ auto get_mass() const {
           return std::sqrt(std::abs(get_e() * get_e() - get_px() * get_px() -
                                     get_py() * get_py() - get_pz() * get_pz()));
         }
       };
 
-      class const_iterator_type : public base_type::const_iterator_type {
-      public:
-        using container_type = particle_container;
-        using container_pointer_type = container_type const *;
-        using shape_type = container_type::shape_type;
-
-        const_iterator_type(container_pointer_type cont, std::size_t idx)
-            : base_type::const_iterator_type(cont, idx) {}
-        const_iterator_type(const_iterator_type &&other) = default;
-        const_iterator_type(const_iterator_type const &other) = default;
-
-        const_iterator_type &operator=(const_iterator_type &&) = default;
-        const_iterator_type &operator=(const_iterator_type const &) = default;
-
-        const_proxy_type operator*() {
-          return const_proxy_type{
-              static_cast<container_pointer_type>(this->container_ptr()),
-              this->index()};
-        }
-
-        const_proxy_type operator*() const {
-          return const_proxy_type{
-              static_cast<container_pointer_type>(this->container_ptr()),
-              this->index()};
-        }
-
-        const_iterator_type &operator++() {
-          base_type::const_iterator_type::operator++();
-          return *this;
-        }
-
-        const_iterator_type operator++(int) {
-
-          auto copy = *this;
-          base_type::const_iterator_type::operator++();
-          return copy;
-        }
-
-        const_iterator_type &operator--() {
-          base_type::proxy_type::operator--();
-          return *this;
-        }
-
-        const_iterator_type operator--(int) {
-
-          auto copy = *this;
-          base_type::const_iterator_type::operator--();
-          return copy;
-        }
-
-        const_iterator_type &operator+=(int i) {
-          base_type::const_iterator_type::operator+=(i);
-          return *this;
-        }
-
-        const_iterator_type operator-=(int i) {
-          base_type::const_iterator_type::operator-=(i);
-          return *this;
-        }
-
-        const_iterator_type operator+(int i) {
-          auto copy = *this;
-          copy += i;
-          return copy;
-        }
-
-        const_iterator_type operator-(int i) {
-          auto copy = *this;
-          copy -= i;
-          return copy;
-        }
-      };
+      using iterator_type = saga::core::proxy_iterator<particle_container>;
+      using const_iterator_type =
+          saga::core::const_proxy_iterator<particle_container>;
 
       /// Access an element of the container
-      auto operator[](std::size_t idx) { return proxy_type(this, idx); }
+      __saga_core_function__ auto operator[](std::size_t idx) {
+        return proxy_type(this, idx);
+      }
 
       /// Access an element of the container
-      auto operator[](std::size_t idx) const {
+      __saga_core_function__ auto operator[](std::size_t idx) const {
 
         return const_proxy_type(this, idx);
       }

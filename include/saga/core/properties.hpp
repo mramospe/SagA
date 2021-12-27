@@ -1,6 +1,5 @@
 #pragma once
 #include "saga/core/backend.hpp"
-#include "saga/core/fields.hpp"
 
 #if SAGA_CUDA_ENABLED
 #include "saga/core/cuda/vector.hpp"
