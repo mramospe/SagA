@@ -30,7 +30,7 @@ namespace saga {
     using const_reference_type = value_type const &;
     using size_type = std::size_t;
 
-    __saga_core_function__ vector() = default;
+    vector() = default;
     __saga_core_function__ vector(size_type n) { resize(n); };
     __saga_core_function__ vector(vector const &other)
         : m_data{allocate(other.m_size)}, m_size{other.m_size} {
@@ -77,7 +77,7 @@ namespace saga {
 
     __saga_core_function__ pointer_type data() const { return m_data; }
 
-    void resize(size_type n) {
+    __saga_core_function__ void resize(size_type n) {
 
       clear();
 
@@ -85,9 +85,9 @@ namespace saga {
       m_size = n;
     }
 
-    constexpr auto size() const { return m_size; }
+    __saga_core_function__ constexpr auto size() const { return m_size; }
 
-    void clear() {
+    __saga_core_function__ void clear() {
 
       if constexpr (Backend == saga::backend::CPU) {
         if (m_data) {
@@ -96,15 +96,8 @@ namespace saga {
         }
       } else {
 #if SAGA_CUDA_ENABLED
-        if (m_data) {
-          auto code = cudaFree(m_data);
-          if (code != cudaSuccess) {
-            auto megabytes = sizeof(T) * m_size / SAGA_SIZE_IN_MEGABYTES;
-            throw std::runtime_error(
-                std::string{"Problems freeing vector of size"} +
-                std::to_string(megabytes) + " MB");
-          }
-        }
+        if (m_data)
+          cudaFree(m_data);
 #else
         SAGA_THROW_CUDA_ERROR;
 #endif
@@ -112,19 +105,15 @@ namespace saga {
     }
 
   private:
-    static pointer_type allocate(size_type n) {
+    __saga_core_function__ static pointer_type allocate(size_type n) {
 
       if constexpr (Backend == saga::backend::CPU)
         return n > 0 ? new value_type[n] : nullptr;
       else {
 #if SAGA_CUDA_ENABLED
-        auto code = cudaMalloc(&m_data, n * sizeof(T));
-        if (code != cudaSuccess) {
-          auto megabytes = sizeof(T) * n / SAGA_SIZE_IN_MEGABYTES;
-          throw std::runtime_error(
-              std::string{"Unable to allocate vector of "} +
-              std::to_string(megabytes) + " MB");
-        }
+        pointer_type ptr;
+        cudaMalloc(&ptr, n * sizeof(T));
+        return ptr;
 #else
         SAGA_THROW_CUDA_ERROR;
 #endif

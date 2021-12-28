@@ -77,11 +77,7 @@ namespace saga::core {
       using container_type = forces;
       using container_pointer_type = container_type *;
 
-      proxy_type(proxy_type const &) = default;
-      proxy_type(proxy_type &&) = default;
-
-      proxy_type(container_pointer_type cont, std::size_t idx)
-          : base_type(cont, idx) {}
+      using base_type::base_type;
 
       __saga_core_function__ proxy_type &operator=(proxy_type const &p) {
         base_type::operator=(p);

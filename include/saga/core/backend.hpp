@@ -1,7 +1,4 @@
 #pragma once
-#if SAGA_CUDA_ENABLED
-#include "saga/core/cuda/vector.hpp"
-#endif
 
 namespace saga {
 
