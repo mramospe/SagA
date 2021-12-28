@@ -83,55 +83,6 @@ namespace saga {
       }
 #endif
 
-      auto const &get_x() const {
-        return this->template get<saga::property::x>();
-      }
-      __saga_core_function__ void set_x(std::size_t i, float_type v) {
-        this->template set<saga::property::x>(i, v);
-      }
-      auto const &get_y() const {
-        return this->template get<saga::property::y>();
-      }
-      __saga_core_function__ void set_y(std::size_t i, float_type v) {
-        this->template set<saga::property::y>(i, v);
-      }
-      auto const &get_z() const {
-        return this->template get<saga::property::z>();
-      }
-      __saga_core_function__ void set_z(std::size_t i, float_type v) {
-        this->template set<saga::property::z>(i, v);
-      }
-      auto const &get_t() const {
-        return this->template get<saga::property::t>();
-      }
-      __saga_core_function__ void set_t(std::size_t i, float_type v) {
-        this->template set<saga::property::t>(i, v);
-      }
-      auto const &get_px() const {
-        return this->template get<saga::property::px>();
-      }
-      __saga_core_function__ void set_px(std::size_t i, float_type v) {
-        this->template set<saga::property::px>(i, v);
-      }
-      auto const &get_py() const {
-        return this->template get<saga::property::py>();
-      }
-      __saga_core_function__ void set_py(std::size_t i, float_type v) {
-        this->template set<saga::property::py>(i, v);
-      }
-      auto const &get_pz() const {
-        return this->template get<saga::property::pz>();
-      }
-      __saga_core_function__ void set_pz(std::size_t i, float_type v) {
-        this->template set<saga::property::pz>(i, v);
-      }
-      auto const &get_e() const {
-        return this->template get<saga::property::e>();
-      }
-      __saga_core_function__ void set_e(std::size_t i, float_type v) {
-        this->template set<saga::property::e>(i, v);
-      }
-
       // forward declarations
       class value_type;
       class proxy_type;
@@ -433,13 +384,15 @@ namespace saga {
       using const_iterator_type =
           saga::core::const_proxy_iterator<particle_container>;
 
+      using size_type = typename base_type::size_type;
+
       /// Access an element of the container
-      __saga_core_function__ auto operator[](std::size_t idx) {
+      __saga_core_function__ auto operator[](size_type idx) {
         return proxy_type(this, idx);
       }
 
       /// Access an element of the container
-      __saga_core_function__ auto operator[](std::size_t idx) const {
+      __saga_core_function__ auto operator[](size_type idx) const {
 
         return const_proxy_type(this, idx);
       }

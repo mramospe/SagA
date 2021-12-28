@@ -1,11 +1,6 @@
 #pragma once
 #include "saga/core/backend.hpp"
-
-#if SAGA_CUDA_ENABLED
-#include "saga/core/cuda/vector.hpp"
-#endif
-
-#include <vector>
+#include "saga/core/vector.hpp"
 
 namespace saga {
   template <template <class> class... Property> struct properties {};
@@ -18,13 +13,13 @@ namespace saga::core {
 
   /// Container for the CPU backend
   template <class T> struct container<T, saga::backend::CPU> {
-    using type = std::vector<T>;
+    using type = saga::vector<T, saga::backend::CPU>;
   };
 
 #if SAGA_CUDA_ENABLED
   /// Container for the CUDA backend
   template <class T> struct container<T, saga::backend::CUDA> {
-    using type = saga::core::cuda::vector<T>;
+    using type = saga::vector<T, saga::backend::CUDA>;
   };
 #endif
 
