@@ -51,6 +51,19 @@ export(EXPORT ${PROJECT_NAME}Targets
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION ${PROJECT_BINARY_DIR} FILES_MATCHING PATTERN *.hpp)
 
 #
+# Avoid incorrect warnings present in Clang and not in GCC
+#
+# See:
+# https://bugs.llvm.org/show_bug.cgi?id=21629
+# https://stackoverflow.com/questions/13905200/is-it-wise-to-ignore-gcc-clangs-wmissing-braces-warning
+#
+if(INSTALL_EXAMPLES OR INSTALL_TESTS)
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+     add_compile_options(-Wno-missing-braces)
+  endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+endif(INSTALL_EXAMPLES OR INSTALL_TESTS)
+
+#
 # Installation of the examples
 #
 if(INSTALL_EXAMPLES)

@@ -1,9 +1,10 @@
 #pragma once
 #include "saga/core/backend.hpp"
 #include "saga/core/properties.hpp"
+#include "saga/core/tuple.hpp"
 #include "saga/core/utils.hpp"
 
-#include <tuple>
+#include <utility>
 
 namespace saga::core {
 
@@ -21,13 +22,13 @@ namespace saga::core {
      */
     template <class Container, template <class> class... Field>
     class value<Container, saga::properties<Field...>>
-        : protected std::tuple<saga::core::underlying_value_type_t<
+        : protected saga::core::tuple<saga::core::underlying_value_type_t<
               Field<typename Container::type_descriptor>>...> {
 
     public:
       using type_descriptor = typename Container::type_descriptor;
 
-      using base_type = std::tuple<
+      using base_type = saga::core::tuple<
           saga::core::underlying_value_type_t<Field<type_descriptor>>...>;
 
       using fields_type = saga::properties<Field...>;
@@ -65,25 +66,27 @@ namespace saga::core {
       /// Get the value of the given field
       template <template <class> class F>
       __saga_core_function__ auto const &get() const {
-        return std::get<saga::core::template_index_v<F, Field...>>(*this);
+        return saga::core::get<saga::core::template_index_v<F, Field...>>(
+            *this);
       }
 
       /// Get the value of the given field
       template <template <class> class F> __saga_core_function__ auto &get() {
-        return std::get<saga::core::template_index_v<F, Field...>>(*this);
+        return saga::core::get<saga::core::template_index_v<F, Field...>>(
+            *this);
       }
 
       /// Whether this class has the specified property
       template <template <class> class Property>
       constexpr __saga_core_function__ bool has() const {
-        return saga::core::is_template_in_v<Property, Field...>;
+        return saga::core::has_single_template_v<Property, Field...>;
       }
 
       /// Set the values of all the fields
       template <template <class> class F>
       __saga_core_function__ void
       set(saga::core::underlying_value_type_t<F<type_descriptor>> v) {
-        std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+        saga::core::get<saga::core::template_index_v<F, Field...>>(*this) = v;
       }
     };
 
@@ -163,7 +166,7 @@ namespace saga::core {
       /// Whether this class has the specified property
       template <template <class> class Property>
       constexpr __saga_core_function__ bool has() const {
-        return saga::core::is_template_in_v<Property, Field...>;
+        return saga::core::has_single_template_v<Property, Field...>;
       }
       /// Get the value of one field from the container
       template <template <class> class F>
@@ -227,7 +230,7 @@ namespace saga::core {
       /// Whether this class has the specified property
       template <template <class> class Property>
       constexpr __saga_core_function__ bool has() const {
-        return saga::core::is_template_in_v<Property, Field...>;
+        return saga::core::has_single_template_v<Property, Field...>;
       }
       /// Get the value of the field
       template <template <class> class F>

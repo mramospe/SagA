@@ -18,7 +18,7 @@ namespace saga::physics {
   struct is_available_interaction<
       saga::physics::coulomb_non_relativistic_interaction,
       saga::properties<Property...>>
-      : std::conditional_t<saga::core::is_template_in_v<
+      : std::conditional_t<saga::core::has_single_template_v<
                                saga::property::electric_charge, Property...>,
                            std::true_type, std::false_type> {};
 

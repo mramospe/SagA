@@ -2,9 +2,9 @@
 #include "saga/core/iterator.hpp"
 #include "saga/core/properties.hpp"
 #include "saga/core/proxy.hpp"
+#include "saga/core/tuple.hpp"
 #include "saga/core/types.hpp"
 
-#include <tuple>
 #include <type_traits>
 
 namespace saga::core {
@@ -14,7 +14,7 @@ namespace saga::core {
    */
   template <class TypeDescriptor, template <class> class... Field>
   class container_with_fields
-      : protected std::tuple<saga::core::container_t<
+      : protected saga::core::tuple<saga::core::container_t<
             saga::core::underlying_value_type_t<Field<TypeDescriptor>>,
             TypeDescriptor::backend>...> {
 
@@ -27,7 +27,7 @@ namespace saga::core {
   public:
     using type_descriptor = TypeDescriptor;
 
-    using base_type = std::tuple<saga::core::container_t<
+    using base_type = saga::core::tuple<saga::core::container_t<
         saga::core::underlying_value_type_t<Field<type_descriptor>>,
         type_descriptor::backend>...>;
 
@@ -48,19 +48,20 @@ namespace saga::core {
 
     /// Resize the container
     void resize(size_type n) {
-      (std::get<saga::core::template_index_v<Field, Field...>>(*this).resize(n),
+      (saga::core::get<saga::core::template_index_v<Field, Field...>>(*this)
+           .resize(n),
        ...);
     }
 
     /// Reserve elements
     void reserve(size_type n) {
-      (std::get<saga::core::template_index_v<Field, Field...>>(*this).reserve(
-           n),
+      (saga::core::get<saga::core::template_index_v<Field, Field...>>(*this)
+           .reserve(n),
        ...);
     }
     /// Number of elements
     __saga_core_function__ size_type size() const {
-      return std::get<0>(*this).size();
+      return saga::core::get<0>(*this).size();
     }
 
     // forward declarations
@@ -85,7 +86,7 @@ namespace saga::core {
     /// Get the container associated to the given field
     template <template <class> class F>
     __saga_core_function__ auto const &get() const {
-      return std::get<saga::core::template_index_v<F, Field...>>(*this);
+      return saga::core::get<saga::core::template_index_v<F, Field...>>(*this);
     }
     /// Get the value associated to the given field and index in the container
     template <template <class> class F>
@@ -100,14 +101,14 @@ namespace saga::core {
     /// Whether this class has the specified property
     template <template <class> class Property>
     constexpr __saga_core_function__ bool has() const {
-      return saga::core::is_template_in_v<Property, Field...>;
+      return saga::core::has_single_template_v<Property, Field...>;
     }
     /// Set the value associated to the given field and index in the container
     template <template <class> class F>
     __saga_core_function__ void
     set(size_type i,
         saga::core::underlying_value_type_t<F<type_descriptor>> v) {
-      std::get<saga::core::template_index_v<F, Field...>>(*this)[i] = v;
+      saga::core::get<saga::core::template_index_v<F, Field...>>(*this)[i] = v;
     }
 
     /// Begining of the container
@@ -176,12 +177,12 @@ namespace saga::core {
     /// Set the container associated to the given field
     template <template <class> class F, class Container>
     void set(Container &&v) const {
-      std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+      saga::core::get<saga::core::template_index_v<F, Field...>>(*this) = v;
     }
 
     template <template <class> class F, class Container>
     void set(Container const &v) const {
-      std::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+      saga::core::get<saga::core::template_index_v<F, Field...>>(*this) = v;
     }
 
 #if SAGA_CUDA_ENABLED
