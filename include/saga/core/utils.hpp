@@ -128,24 +128,52 @@ namespace saga::core {
     template <class V> using tpl = T0<V>;
   };
 
+  //
+  // This duplication is needed to avoid getting warnings of the type
+  //
+  // warning: missing return statement at end of non-void function
+  //
+  // when using "if constexpr" expressions with nvcc
+  //
+
+  namespace detail {
+
+    template <std::size_t I> struct value_at_t {
+
+      template <class T, class... Ts>
+      constexpr auto const &operator()(T const &, Ts const &...t) const {
+        return value_at_t<I - 1>{}(t...);
+      }
+
+      template <class T, class... Ts>
+      constexpr auto &operator()(T &, Ts &...t) const {
+        return value_at_t<I - 1>{}(t...);
+      }
+    };
+
+    template <> struct value_at_t<0> {
+
+      template <class T, class... Ts>
+      constexpr auto const &operator()(T const &t, Ts const &...) const {
+        return t;
+      }
+
+      template <class T, class... Ts>
+      constexpr auto &operator()(T &t, Ts &...) const {
+        return t;
+      }
+    };
+  } // namespace detail
+
   /// Get the value at the given position
-  template <std::size_t I, class T0, class... T>
-  constexpr auto const &value_at(T0 const &v0, T const &...v) {
-    static_assert(I < 1 + sizeof...(T), "Template index is out of range");
-    if constexpr (I == 0)
-      return v0;
-    else
-      return value_at<I - 1>(v...);
+  template <std::size_t I, class... T>
+  constexpr auto const &value_at(T const &...v) {
+    return detail::value_at_t<I>{}(v...);
   }
 
   /// Get the value at the given position
-  template <std::size_t I, class T0, class... T>
-  constexpr auto &value_at(T0 &v0, T &...v) {
-    static_assert(I < 1 + sizeof...(T), "Template index is out of range");
-    if constexpr (I == 0)
-      return v0;
-    else
-      return value_at<I - 1>(v...);
+  template <std::size_t I, class... T> constexpr auto &value_at(T &...v) {
+    return detail::value_at_t<I>{}(v...);
   }
 
 } // namespace saga::core

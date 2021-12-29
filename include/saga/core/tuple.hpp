@@ -11,7 +11,9 @@ namespace saga::core {
     template <std::size_t I> struct get_t;
   } // namespace detail
 
-  template <class T, class... Ts> class tuple {
+  template <class... T> class tuple;
+
+  template <class T, class... Ts> class tuple<T, Ts...> {
 
     using size_type = std::size_t;
 
@@ -60,24 +62,56 @@ namespace saga::core {
     T m_value;
   };
 
+  template <> class tuple<> {
+
+    using size_type = std::size_t;
+
+  public:
+    tuple() = default;
+    tuple(tuple &&) = default;
+    tuple(tuple const &) = default;
+
+    tuple &operator=(tuple const &) = default;
+    tuple &operator=(tuple &&) = default;
+
+    __saga_core_function__ constexpr size_type size() const { return 0u; }
+  };
+
   namespace detail {
+
+    //
+    // This duplication is needed to avoid getting warnings of the type
+    //
+    // warning: missing return statement at end of non-void function
+    //
+    // when using "if constexpr" expressions with nvcc
+    //
+
     template <std::size_t I> struct get_t {
 
       template <class... T>
       __saga_core_function__ constexpr auto const &
       operator()(tuple<T...> const &t) const {
-        if constexpr (I == 0)
-          return t.m_value;
-        else
-          return get_t<I - 1>{}(t.m_remainder);
+        return get_t<I - 1>{}(t.m_remainder);
       }
 
       template <class... T>
       __saga_core_function__ constexpr auto &operator()(tuple<T...> &t) const {
-        if constexpr (I == 0)
-          return t.m_value;
-        else
-          return get_t<I - 1>{}(t.m_remainder);
+        return get_t<I - 1>{}(t.m_remainder);
+      }
+    };
+
+    template <> struct get_t<0> {
+
+      template <class... T>
+      __saga_core_function__ constexpr auto const &
+      operator()(tuple<T...> const &t) const {
+        return t.m_value;
+      }
+
+      template <class... T>
+      __saga_core_function__ constexpr auto &operator()(tuple<T...> &t) const {
+        return t.m_value;
       }
     };
   } // namespace detail
