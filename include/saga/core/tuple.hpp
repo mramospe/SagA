@@ -2,6 +2,7 @@
 #include "saga/core/backend.hpp"
 #include "saga/core/utils.hpp"
 #include <cstdlib>
+#include <utility>
 
 namespace saga::core {
 
@@ -80,6 +81,14 @@ namespace saga::core {
       }
     };
   } // namespace detail
+
+  template <class... T> __saga_core_function__ auto make_tuple(T &&...t) {
+    return tuple<T...>(std::forward<T>(t)...);
+  }
+
+  template <class... T> __saga_core_function__ auto make_tuple(T const &...t) {
+    return tuple<T...>(t...);
+  }
 
   template <class T, class... Ts>
   __saga_core_function__ auto &get(tuple<Ts...> &t) {

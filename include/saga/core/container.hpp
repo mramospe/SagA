@@ -198,10 +198,10 @@ namespace saga::core {
 
       if constexpr (NewBackend == saga::backend::CUDA)
         return build_container_in_new_backend<NewBackend, Field...>(
-            &saga::core::cuda::to_device);
+            &saga::to_device);
       else
         return build_container_in_new_backend<NewBackend, Field...>(
-            &saga::core::cuda::to_host);
+            &saga::to_host);
     }
 
   private:

@@ -41,7 +41,7 @@ namespace saga::core::cuda {
                              Function &&force_function,
                              Particles const &particles) {
 
-    extern __shared__ typename Particles::value_type[] shared_particles;
+    extern __shared__ typename Particles::value_type shared_particles[];
 
     auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -64,7 +64,7 @@ namespace saga::core::cuda {
           if (tile * blockDim.x + i == gtid)
             continue;
           else if (tile * blockDim.x + i < particles.size())
-            acc += force_function(particle_position, shared_particles[i]);
+            acc += force_function(current_particle, shared_particles[i]);
           else
             break;
         }

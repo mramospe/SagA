@@ -108,7 +108,7 @@ namespace saga::core {
 
     template <class Forces, class Function, class Particles>
     static void evaluate([[maybe_unused]] Forces &forces,
-                         [[maybe_unused]] Function &&function,
+                         [[maybe_unused]] Function &&force_function,
                          [[maybe_unused]] Particles const &particles) {
 
 #if SAGA_CUDA_ENABLED

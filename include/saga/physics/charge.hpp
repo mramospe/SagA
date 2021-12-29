@@ -23,7 +23,7 @@ namespace saga::physics {
       using float_type = typename TypeDescriptor::float_type;
       /// Retrieve the mass
       template <class Proxy>
-      constexpr __saga_core_function__ float_type
+      __saga_core_function__ constexpr float_type
       operator()(Proxy const &p) const {
         return p.template get<saga::property::electric_charge>();
       }

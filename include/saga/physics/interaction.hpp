@@ -24,15 +24,12 @@ namespace saga::physics {
     /// Charge type
     using charge_type = Charge<TypeDescriptor>;
 
-    /// Functor accessing the charge
-    static constexpr charge_type charge = charge_type{};
-
     /// Evaluate the force for two objects
     template <class Proxy>
     __saga_core_function__ Output operator()(Proxy const &src,
                                              Proxy const &tgt) const {
-      return force(charge(src), src.template get<Property>()..., charge(tgt),
-                   tgt.template get<Property>()...);
+      return force(charge_type{}(src), src.template get<Property>()...,
+                   charge_type{}(tgt), tgt.template get<Property>()...);
     }
 
     /// Evaluate the force given the two sets of properties
@@ -69,7 +66,7 @@ namespace saga::physics {
     central_force_non_relativistic(K &&...v)
         : interaction_base_type{},
           keywords_parser_base_type(
-              std::make_tuple(
+              saga::core::make_tuple(
                   soften_factor{saga::numeric_info<TypeDescriptor>::min}),
               std::forward<K>(v)...) {}
 

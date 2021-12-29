@@ -129,7 +129,7 @@ namespace saga {
   template <class T>
   auto to_device(vector<T, saga::backend::CPU> const &other) {
 
-    vector<T, saga::CUDA> out(other.size());
+    vector<T, saga::backend::CUDA> out(other.size());
 
     auto code = cudaMemcpy(out.data(), other.data(), other.size() * sizeof(T),
                            cudaMemcpyHostToDevice);
@@ -142,7 +142,7 @@ namespace saga {
   /// Return a vector whose memory is allocated on the host
   template <class T> auto to_host(vector<T, saga::backend::CUDA> const &other) {
 
-    vector<T, saga::CPU> out(other.size());
+    vector<T, saga::backend::CPU> out(other.size());
 
     auto code = cudaMemcpy(out.data(), other.data(), other.size() * sizeof(T),
                            cudaMemcpyDeviceToHost);

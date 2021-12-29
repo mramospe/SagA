@@ -79,7 +79,7 @@ namespace saga {
       /// Return this container with the data allocated in the device
       template <saga::backend NewBackend>
       type_with_backend<NewBackend> to_backend() const {
-        return base_type::to_backend<NewBackend>();
+        return base_type::template to_backend<NewBackend>();
       }
 #endif
 

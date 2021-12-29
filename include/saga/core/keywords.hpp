@@ -1,7 +1,8 @@
 #pragma once
+#include "saga/core/backend.hpp"
+#include "saga/core/tuple.hpp"
 #include "saga/core/types.hpp"
 #include "saga/core/utils.hpp"
-#include <tuple>
 #include <variant>
 
 namespace saga::core::keywords {
@@ -127,7 +128,7 @@ namespace saga::core::keywords {
     to provide the input arguments in any order.
 
     The keyword arguments are stored within the class, which inherits from
-    \ref std::tuple. You can use the \ref keywords_parser::get and
+    \ref saga::core::tuple. You can use the \ref keywords_parser::get and
     \ref keywords_parser::set member functions to manipulate the values.
    */
   template <class TypeDescriptor, class Required, class... Keyword>
@@ -136,7 +137,7 @@ namespace saga::core::keywords {
   template <class TypeDescriptor, class... RequiredKeyword, class... Keyword>
   class keywords_parser<TypeDescriptor, required<RequiredKeyword...>,
                         Keyword...>
-      : protected std::tuple<
+      : protected saga::core::tuple<
             detail::keyword_numeric_type_t<
                 TypeDescriptor,
                 typename RequiredKeyword::underlying_keyword_type>...,
@@ -149,7 +150,7 @@ namespace saga::core::keywords {
 
   public:
     /// Base type
-    using base_type = std::tuple<
+    using base_type = saga::core::tuple<
         detail::keyword_numeric_type_t<
             TypeDescriptor,
             typename RequiredKeyword::underlying_keyword_type>...,
@@ -158,20 +159,21 @@ namespace saga::core::keywords {
 
     /// Constructor from the keyword arguments and a tuple of default values
     template <class... Default, class... K>
-    keywords_parser(std::tuple<Default...> &&defaults, K... v) noexcept
+    keywords_parser(saga::core::tuple<Default...> &&defaults, K... v) noexcept
         : base_type{parse_keywords_with_defaults_and_required(
-              std::forward<std::tuple<Default...>>(defaults), v...)} {}
+              std::forward<saga::core::tuple<Default...>>(defaults), v...)} {}
 
     /// Get a keyword argument
-    template <class K> constexpr auto get() const {
-      return std::get<saga::core::index_v<K, RequiredKeyword..., Keyword...>>(
-          *this);
+    template <class K> __saga_core_function__ constexpr auto get() const {
+      return saga::core::get<
+          saga::core::index_v<K, RequiredKeyword..., Keyword...>>(*this);
     }
 
     /// Set a keyword argument
-    template <class K> constexpr auto set(typename K::value_type v) const {
-      std::get<saga::core::index_v<K, RequiredKeyword..., Keyword...>>(*this) =
-          v;
+    template <class K>
+    __saga_core_function__ constexpr auto set(typename K::value_type v) const {
+      saga::core::get<saga::core::index_v<K, RequiredKeyword..., Keyword...>>(
+          *this) = v;
     }
 
   private:
@@ -181,7 +183,8 @@ namespace saga::core::keywords {
     */
     template <std::size_t I, class... Default, class... K>
     static constexpr auto
-    value_or_default(std::tuple<Default...> const &defaults, K... keyword) {
+    value_or_default(saga::core::tuple<Default...> const &defaults,
+                     K... keyword) {
 
       using current_keyword_type =
           saga::core::type_at_t<I, RequiredKeyword..., Keyword...>;
@@ -200,7 +203,7 @@ namespace saga::core::keywords {
                 .variant);
       } else {
         std::visit([&](auto const &v) { value = v; },
-                   std::get<current_keyword_type>(defaults).variant);
+                   saga::core::get<current_keyword_type>(defaults).variant);
       }
 
       return value;
@@ -210,7 +213,7 @@ namespace saga::core::keywords {
     template <std::size_t... I, class... Default, class... K>
     static constexpr base_type
     parse_keywords_with_defaults_impl(std::index_sequence<I...>,
-                                      std::tuple<Default...> &&defaults,
+                                      saga::core::tuple<Default...> &&defaults,
                                       K... keyword) {
 
       return {value_or_default<I>(defaults, keyword...)...};
@@ -218,9 +221,8 @@ namespace saga::core::keywords {
 
     /// Parse the input keyword arguments with the given list of default values
     template <class... Default, class... K>
-    static constexpr base_type
-    parse_keywords_with_defaults_and_required(std::tuple<Default...> &&defaults,
-                                              K... keywords) {
+    static constexpr base_type parse_keywords_with_defaults_and_required(
+        saga::core::tuple<Default...> &&defaults, K... keywords) {
       static_assert(!has_repeated_template_arguments_v<K...>,
                     "Keyword arguments are repeated");
       static_assert(
@@ -231,7 +233,7 @@ namespace saga::core::keywords {
       return parse_keywords_with_defaults_impl(
           std::make_index_sequence<((sizeof...(RequiredKeyword)) +
                                     (sizeof...(Keyword)))>(),
-          std::forward<std::tuple<Default...>>(defaults), keywords...);
+          std::forward<saga::core::tuple<Default...>>(defaults), keywords...);
     }
   };
 } // namespace saga::core::keywords
