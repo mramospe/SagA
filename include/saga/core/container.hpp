@@ -4,6 +4,7 @@
 #include "saga/core/proxy.hpp"
 #include "saga/core/tuple.hpp"
 #include "saga/core/types.hpp"
+#include "saga/core/views.hpp"
 
 #include <type_traits>
 
@@ -78,6 +79,9 @@ namespace saga::core {
             saga::core::underlying_value_type_t<Field<TypeDescriptor>>,
             TypeDescriptor::backend>...> {
 
+    template<class Container, template <class> class ... F>
+      friend auto saga::core::detail::make_vector_views_impl(Container&, saga::properties<F...>);
+
 #if SAGA_CUDA_ENABLED
     template <saga::backend> friend class saga::core::detail::to_backend_t;
 #endif
@@ -127,21 +131,24 @@ namespace saga::core {
        ...);
     }
 
-    /// Reserve elements
-    void reserve(size_type n) {
-      (saga::core::get<saga::core::template_index_v<Field, Field...>>(*this)
-           .reserve(n),
-       ...);
-    }
     /// Number of elements
     __saga_core_function__ size_type size() const {
       return saga::core::get<0>(*this).size();
     }
 
     // forward declarations
-    using value_type = saga::core::value<container_with_fields>;
-    using proxy_type = saga::core::proxy<container_with_fields>;
-    using const_proxy_type = saga::core::const_proxy<container_with_fields>;
+    template <class ContainerOrView>
+    using value = saga::core::value<ContainerOrView>;
+
+    template <class ContainerOrView>
+    using proxy = saga::core::proxy<ContainerOrView>;
+
+    template <class ContainerOrView>
+    using const_proxy = saga::core::const_proxy<ContainerOrView>;
+
+    using value_type = value<container_with_fields>;
+    using proxy_type = proxy<container_with_fields>;
+    using const_proxy_type = const_proxy<container_with_fields>;
     using iterator_type = saga::core::proxy_iterator<container_with_fields>;
     using const_iterator_type =
         saga::core::const_proxy_iterator<container_with_fields>;
@@ -258,6 +265,12 @@ namespace saga::core {
     template <template <class> class F, class Container>
     void set(Container const &v) {
       saga::core::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+    }
+
+    /// Get the container associated to the given field
+    template <template <class> class F>
+    __saga_core_function__ auto& get_non_const() {
+      return saga::core::get<saga::core::template_index_v<F, Field...>>(*this);
     }
   };
 } // namespace saga::core

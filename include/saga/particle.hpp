@@ -77,35 +77,39 @@ namespace saga {
                              Shape, saga::properties<Property...>>;
 
       // forward declarations
-      class value_type;
-      class proxy_type;
-      class const_proxy_type;
+      template <class ContainerOrView> class value;
 
-      class value_type : public saga::core::value<particle_container> {
+      template <class ContainerOrView> class proxy;
+
+      template <class ContainerOrView> class const_proxy;
+
+      template <class ContainerOrView>
+      class value : public saga::core::value<ContainerOrView> {
 
       public:
-        using base_type = saga::core::value<particle_container>;
+        using base_type = saga::core::value<ContainerOrView>;
         using shape_type = particle_container::shape_type;
 
         template <class... T>
-        __saga_core_function__ value_type(T &&...v)
+        __saga_core_function__ value(T &&...v)
             : base_type{std::forward<T>(v)...} {}
 
         template <class... T>
-        __saga_core_function__ value_type(T const &...v) : base_type{v...} {}
+        __saga_core_function__ value(T const &...v) : base_type{v...} {}
 
-        value_type() = default;
-        value_type(value_type const &) = default;
-        value_type(value_type &&) = default;
-        value_type &operator=(value_type &&) = default;
-        value_type &operator=(value_type const &) = default;
+        value() = default;
+        value(value const &) = default;
+        value(value &&) = default;
+        value &operator=(value &&) = default;
+        value &operator=(value const &) = default;
 
-        __saga_core_function__ value_type &operator=(proxy_type const &p) {
+        __saga_core_function__ value &
+        operator=(proxy<ContainerOrView> const &p) {
           base_type::operator=(p);
           return *this;
         }
-        __saga_core_function__ value_type &
-        operator=(const_proxy_type const &p) {
+        __saga_core_function__ value &
+        operator=(const_proxy<ContainerOrView> const &p) {
           base_type::operator=(p);
           return *this;
         }
@@ -197,26 +201,27 @@ namespace saga {
         }
       };
 
-      class proxy_type : public saga::core::proxy<particle_container> {
+      template <class ContainerOrView>
+      class proxy : public saga::core::proxy<ContainerOrView> {
 
       public:
-        using base_type = saga::core::proxy<particle_container>;
-        using container_type = particle_container;
+        using base_type = saga::core::proxy<ContainerOrView>;
+        using shape_type = particle_container::shape_type;
+        using container_type = ContainerOrView;
         using container_pointer_type = container_type *;
-        using shape_type = container_type::shape_type;
         using size_type = typename base_type::size_type;
 
-        proxy_type() = delete;
-        proxy_type(proxy_type const &) = default;
-        proxy_type(proxy_type &) = default;
-        __saga_core_function__ proxy_type(container_pointer_type cont,
-                                          size_type idx)
+        proxy() = delete;
+        proxy(proxy const &) = default;
+        proxy(proxy &) = default;
+        __saga_core_function__ proxy(container_pointer_type cont, size_type idx)
             : base_type{cont, idx} {}
 
-        proxy_type &operator=(proxy_type const &) = default;
-        proxy_type &operator=(proxy_type &&) = default;
+        proxy &operator=(proxy const &) = default;
+        proxy &operator=(proxy &&) = default;
 
-        __saga_core_function__ proxy_type &operator=(value_type const &p) {
+        __saga_core_function__ proxy &
+        operator=(value<ContainerOrView> const &p) {
           base_type::operator=(p);
           return *this;
         }
@@ -308,25 +313,25 @@ namespace saga {
         }
       };
 
-      class const_proxy_type
-          : public saga::core::const_proxy<particle_container> {
+      template <class ContainerOrView>
+      class const_proxy : public saga::core::const_proxy<ContainerOrView> {
       public:
-        using base_type = saga::core::const_proxy<particle_container>;
-        using container_type = particle_container;
+        using base_type = saga::core::const_proxy<ContainerOrView>;
+        using shape_type = particle_container::shape_type;
+        using container_type = ContainerOrView;
         using container_pointer_type = container_type const *;
-        using shape_type = container_type::shape_type;
         using size_type = typename base_type::size_type;
 
-        const_proxy_type() = delete;
-        const_proxy_type(const_proxy_type const &) = default;
-        const_proxy_type(const_proxy_type &) = default;
-        __saga_core_function__ const_proxy_type(container_pointer_type cont,
-                                                size_type idx)
+        const_proxy() = delete;
+        const_proxy(const_proxy const &) = default;
+        const_proxy(const_proxy &) = default;
+        __saga_core_function__ const_proxy(container_pointer_type cont,
+                                           size_type idx)
             : base_type{cont, idx} {}
 
-        const_proxy_type &operator=(const_proxy_type const &p) = default;
+        const_proxy &operator=(const_proxy const &p) = default;
 
-        const_proxy_type &operator=(const_proxy_type &&p) = default;
+        const_proxy &operator=(const_proxy &&p) = default;
 
         __saga_core_function__ auto const &get_x() const {
           return this->template get<saga::property::x>();
@@ -382,6 +387,9 @@ namespace saga {
         }
       };
 
+      using value_type = value<particle_container>;
+      using proxy_type = proxy<particle_container>;
+      using const_proxy_type = const_proxy<particle_container>;
       using iterator_type = saga::core::proxy_iterator<particle_container>;
       using const_iterator_type =
           saga::core::const_proxy_iterator<particle_container>;

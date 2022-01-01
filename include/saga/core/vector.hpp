@@ -83,8 +83,7 @@ namespace saga {
         : m_data{saga::core::allocate<value_type, backend>(other.m_size)},
           m_size{other.m_size} {
 
-      for (auto i = 0u; i < other.m_size; ++i)
-        this->operator[](i) = other[i];
+      copy_already_allocated(other);
     }
     __saga_core_function__ vector(vector &&other)
         : m_data{other.m_data}, m_size{other.m_size} {
@@ -99,8 +98,7 @@ namespace saga {
       m_data = saga::core::allocate<value_type, backend>(other.m_size);
       m_size = other.m_size;
 
-      for (auto i = 0u; i < other.m_size; ++i)
-        this->operator[](i) = other[i];
+      copy_already_allocated(other);
 
       return *this;
     }
@@ -157,6 +155,34 @@ namespace saga {
     }
 
   private:
+    void copy_already_allocated(vector const &other) {
+
+#if SAGA_CUDA_ENABLED
+      if constexpr (backend == saga::backend::CPU) {
+        auto code =
+            cudaMemcpy(m_data, other.data(), m_size * sizeof(value_type),
+                       cudaMemcpyHostToHost);
+
+        if (code != cudaSuccess)
+          throw std::runtime_error(
+              "Unable to copy vector inside the host. Reason: " +
+              std::string{cudaGetErrorString(code)});
+      } else {
+        auto code =
+            cudaMemcpy(m_data, other.data(), m_size * sizeof(value_type),
+                       cudaMemcpyDeviceToDevice);
+
+        if (code != cudaSuccess)
+          throw std::runtime_error(
+              "Unable to copy vector inside the device. Reason: " +
+              std::string{cudaGetErrorString(code)});
+      }
+#else
+      for (auto i = 0u; i < m_size; ++i)
+        this->operator[](i) = other[i];
+#endif
+    }
+
     pointer_type m_data = nullptr;
     size_type m_size = 0;
   };
@@ -172,7 +198,8 @@ namespace saga {
                            cudaMemcpyHostToDevice);
 
     if (code != cudaSuccess)
-      throw std::runtime_error("Unable to copy vector to the device");
+      throw std::runtime_error("Unable to copy vector to the device. Reason: " +
+                               std::string{cudaGetErrorString(code)});
 
     return out;
   }
@@ -184,8 +211,10 @@ namespace saga {
 
     auto code = cudaMemcpy(out.data(), other.data(), other.size() * sizeof(T),
                            cudaMemcpyDeviceToHost);
+
     if (code != cudaSuccess)
-      throw std::runtime_error("Unable to copy vector to host");
+      throw std::runtime_error("Unable to copy vector to host. Reason: " +
+                               std::string{cudaGetErrorString(code)});
 
     return out;
   }

@@ -9,5 +9,6 @@
 #include "saga/core/types.hpp"
 #include "saga/core/utils.hpp"
 #include "saga/core/vector.hpp"
+#include "saga/core/views.hpp"
 
 namespace saga::core {}

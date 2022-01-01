@@ -1,12 +1,20 @@
 #include "saga/all.hpp"
 #include "test_utils.hpp"
 
-template <class Proxy> __device__ void set_particle(Proxy proxy) {
+#define SAGA_TEST_DEFAULT_FLOAT_VALUE 1.f
 
-  auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
+struct set_particle {
+  template <class Proxy> __device__ void operator()(Proxy proxy) const {
+    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
+    proxy.set_momenta_and_mass(gtid, gtid, gtid, SAGA_TEST_DEFAULT_FLOAT_VALUE);
+  }
+};
 
-  proxy.set_momenta_and_mass(gtid, gtid, gtid, 1.);
-}
+struct set_value {
+  template <class View> __device__ void operator()(View &view) const {
+    view = SAGA_TEST_DEFAULT_FLOAT_VALUE;
+  }
+};
 
 // Test the creation of a container
 saga::test::errors test_container() {
@@ -22,12 +30,12 @@ saga::test::errors test_backend() {
   saga::particles<saga::cpu::sf> particles(10);
 
   for (auto p : particles)
-    p.set_momenta_and_mass(0.f, 0.f, 0.f, 1.f);
+    p.set_momenta_and_mass(0.f, 0.f, 0.f, SAGA_TEST_DEFAULT_FLOAT_VALUE);
 
   for (auto p : particles) {
-    if (!saga::test::is_close(p.get_mass(), 1.f)) {
+    if (!saga::test::is_close(p.get_mass(), SAGA_TEST_DEFAULT_FLOAT_VALUE)) {
       errors.push_back("Problems assigning values with proxies in the host");
-      break;
+      return errors;
     }
   }
 
@@ -38,17 +46,53 @@ saga::test::errors test_backend() {
   particles = saga::to_backend<saga::backend::CPU>(cuda_particles);
 
   for (auto p : particles) {
-    if (!saga::test::is_close(p.get_mass(), 1.f)) {
+    if (!saga::test::is_close(p.get_mass(), SAGA_TEST_DEFAULT_FLOAT_VALUE)) {
       errors.push_back("Problems assigning values with proxies in the host");
-      break;
+      return errors;
     }
   }
 
   return errors;
 }
 
+saga::test::errors test_vector_iteration() {
+
+  saga::test::errors errors;
+
+  using vector_type = saga::vector<float, saga::backend::CUDA>;
+
+  vector_type vector(10);
+
+  try {
+
+    auto vector_view = saga::core::make_vector_view(vector);
+
+    saga::core::cuda::apply_simple_functor_inplace(vector_view, set_value{});
+
+  } catch (std::runtime_error const &e) {
+    errors.push_back(e.what());
+    return errors;
+  }
+
+  try {
+    auto cpu_vector = saga::to_host(vector);
+
+    for (auto i = 0u; i < cpu_vector.size(); ++i) {
+      if (!saga::test::is_close(cpu_vector[i], SAGA_TEST_DEFAULT_FLOAT_VALUE)) {
+        errors.push_back("Problems setting the values of a vector using CUDA");
+        break;
+      }
+    }
+  } catch (std::runtime_error const &e) {
+    errors.push_back(e.what());
+    return errors;
+  }
+
+  return errors;
+}
+
 // Test that we can iterate the container
-saga::test::errors test_iteration() {
+saga::test::errors test_container_iteration() {
 
   saga::test::errors errors;
 
@@ -56,24 +100,39 @@ saga::test::errors test_iteration() {
 
   particles_type particles(10);
 
-  saga::core::cuda::apply_simple_function_inplace(
-      particles, &set_particle<typename particles_type::proxy_type>);
+  try {
 
-  auto cpu_particles = saga::to_backend<saga::backend::CPU>(particles);
+    auto particles_view = saga::core::make_container_view(particles);
 
-  for (auto i = 0u; i < cpu_particles.size(); ++i) {
+    saga::core::cuda::apply_simple_functor_inplace(particles_view,
+                                                   set_particle{});
 
-    auto const proxy = cpu_particles[i];
+  } catch (std::runtime_error const &e) {
+    errors.push_back(e.what());
+    return errors;
+  }
 
-    if (!saga::test::is_close(proxy.get_px(), i) ||
-        !saga::test::is_close(proxy.get_py(), i) ||
-        !saga::test::is_close(proxy.get_pz(), i) ||
-        !saga::test::is_close(proxy.get_mass(), 1.f)) {
-      std::cout << proxy.get_px() << ' ' << proxy.get_py() << ' '
-                << proxy.get_pz() << ' ' << proxy.get_mass() << std::endl;
-      errors.push_back("Error assigning values to the particles");
-      break;
+  try {
+    auto cpu_particles = saga::to_backend<saga::backend::CPU>(particles);
+
+    for (auto i = 0u; i < cpu_particles.size(); ++i) {
+
+      auto const proxy = cpu_particles[i];
+
+      if (!saga::test::is_close(proxy.get_px(), i) ||
+          !saga::test::is_close(proxy.get_py(), i) ||
+          !saga::test::is_close(proxy.get_pz(), i) ||
+          !saga::test::is_close(proxy.get_mass(),
+                                SAGA_TEST_DEFAULT_FLOAT_VALUE)) {
+        std::cout << proxy.get_px() << ' ' << proxy.get_py() << ' '
+                  << proxy.get_pz() << ' ' << proxy.get_mass() << std::endl;
+        errors.push_back("Error assigning values to the particles");
+        break;
+      }
     }
+  } catch (std::runtime_error const &e) {
+    errors.push_back(e.what());
+    return errors;
   }
 
   return errors;
@@ -84,7 +143,8 @@ int main() {
   saga::test::collector collector("container");
   SAGA_TEST_UTILS_ADD_TEST(collector, test_container);
   SAGA_TEST_UTILS_ADD_TEST(collector, test_backend);
-  SAGA_TEST_UTILS_ADD_TEST(collector, test_iteration);
+  SAGA_TEST_UTILS_ADD_TEST(collector, test_vector_iteration);
+  SAGA_TEST_UTILS_ADD_TEST(collector, test_container_iteration);
 
   return !collector.run();
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "saga/core/backend.hpp"
+#include "saga/core/views.hpp"
 #if SAGA_CUDA_ENABLED
 #include "saga/core/cuda/core.hpp"
 #include "saga/core/cuda/loops.hpp"
@@ -10,34 +11,40 @@ namespace saga::core {
   namespace detail {
 
     /// Core function to integrate the position of a particle
-    template <class Proxy, class FloatType>
-    __saga_core_function__ void integrate_position(Proxy p, FloatType delta_t) {
+    struct integrate_position_kernel_fctr {
 
-      p.set_x(p.get_x() + p.get_px() / p.get_mass() * 0.5 * delta_t);
-      p.set_y(p.get_y() + p.get_py() / p.get_mass() * 0.5 * delta_t);
-      p.set_z(p.get_z() + p.get_pz() / p.get_mass() * 0.5 * delta_t);
-      p.set_t(p.get_t() + p.get_e() / p.get_mass() * 0.5 * delta_t);
-    }
+      template <class Proxy, class FloatType>
+      __saga_core_function__ void operator()(Proxy p, FloatType delta_t) const {
+
+        p.set_x(p.get_x() + p.get_px() / p.get_mass() * 0.5 * delta_t);
+        p.set_y(p.get_y() + p.get_py() / p.get_mass() * 0.5 * delta_t);
+        p.set_z(p.get_z() + p.get_pz() / p.get_mass() * 0.5 * delta_t);
+        p.set_t(p.get_t() + p.get_e() / p.get_mass() * 0.5 * delta_t);
+      }
+    };
 
     /// Core function to integrate the momenta and determine the new position of
     /// a particle
-    template <class ParticleProxy, class ForceProxy, class FloatType>
-    __saga_core_function__ void
-    integrate_momenta_and_position(ParticleProxy particle,
-                                   ForceProxy const force, FloatType delta_t) {
+    struct integrate_momenta_and_position_kernel_fctr {
 
-      auto mass =
-          particle.get_mass(); // whatever we do, we must preserve the mass
+      template <class ParticleProxy, class ForceProxy, class FloatType>
+      __saga_core_function__ void operator()(ParticleProxy particle,
+                                             ForceProxy const force,
+                                             FloatType delta_t) const {
 
-      // momenta
-      particle.set_momenta_and_mass(particle.get_px() + force.get_x() * delta_t,
-                                    particle.get_py() + force.get_y() * delta_t,
-                                    particle.get_pz() + force.get_z() * delta_t,
-                                    mass);
+        auto mass =
+            particle.get_mass(); // whatever we do, we must preserve the mass
 
-      // integrate the positions
-      detail::integrate_position(particle, delta_t);
-    }
+        // momenta
+        particle.set_momenta_and_mass(
+            particle.get_px() + force.get_x() * delta_t,
+            particle.get_py() + force.get_y() * delta_t,
+            particle.get_pz() + force.get_z() * delta_t, mass);
+
+        // integrate the positions
+        detail::integrate_position_kernel_fctr{}(particle, delta_t);
+      }
+    };
   } // namespace detail
 
   /// Functor that integrates the positions
@@ -47,7 +54,7 @@ namespace saga::core {
     template <class Particles, class FloatType>
     static void evaluate(Particles &particles, FloatType delta_t) {
       for (auto p : particles)
-        detail::integrate_position(p, delta_t);
+        detail::integrate_position_kernel_fctr{}(p, delta_t);
     }
   };
 
@@ -56,11 +63,10 @@ namespace saga::core {
     static void evaluate([[maybe_unused]] Particles &particles,
                          [[maybe_unused]] FloatType delta_t) {
 #if SAGA_CUDA_ENABLED
-      saga::core::cuda::apply_simple_function_inplace(
-          particles,
-          &detail::integrate_position<typename Particles::proxy_type,
-                                      decltype(delta_t)>,
-          delta_t);
+      auto particles_view = saga::core::make_container_view(particles);
+
+      saga::core::cuda::apply_simple_functor_inplace(
+          particles_view, detail::integrate_position_kernel_fctr{}, delta_t);
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");
@@ -121,9 +127,12 @@ namespace saga::core {
       auto smem = SAGA_CUDA_MAX_THREADS_PER_BLOCK_X *
                   sizeof(typename Particles::value_type);
 
+      auto particles_view = saga::core::make_container_view(particles);
+      auto forces_view = saga::core::make_container_view(forces);
+
       saga::core::cuda::
           add_forces<<<nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X, smem>>>(
-              tile_size, forces, force_function, particles);
+              tile_size, forces_view, force_function, particles_view);
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");
@@ -141,8 +150,8 @@ namespace saga::core {
     evaluate(Particles &particles, Forces const &forces, FloatType delta_t) {
 
       for (auto i = 0u; i < particles.size(); ++i) {
-        detail::integrate_momenta_and_position(particles[i], forces[i],
-                                               delta_t);
+        detail::integrate_momenta_and_position_kernel_fctr{}(
+            particles[i], forces[i], delta_t);
       }
     }
   };
@@ -158,13 +167,14 @@ namespace saga::core {
       auto N = particles.size();
       auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
                      (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
-      saga::core::cuda::apply_contiguous_function_inplace<<<
+
+      auto particles_view = saga::core::make_container_view(particles);
+      auto forces_view = saga::core::make_container_view(forces);
+
+      saga::core::cuda::apply_contiguous_functor_inplace<<<
           nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
-          particles, forces,
-          &detail::integrate_momenta_and_position<
-              typename Particles::proxy_type, typename Forces::const_proxy_type,
-              decltype(delta_t)>,
-          delta_t);
+          particles_view, forces_view,
+          detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");

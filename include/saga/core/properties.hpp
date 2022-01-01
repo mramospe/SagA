@@ -1,12 +1,26 @@
 #pragma once
 #include "saga/core/backend.hpp"
 #include "saga/core/vector.hpp"
+#include "saga/core/utils.hpp"
 
 namespace saga {
-  template <template <class> class... Property> struct properties {};
+  template <template <class> class... Property> struct properties {
+    static constexpr auto size = sizeof ... (Property);
+  };
 } // namespace saga
 
 namespace saga::core {
+
+  template<template<class> class Property, class Properties>
+  struct property_index;
+
+  template<template<class> class Property, template <class> class ... P>
+  struct property_index<Property, saga::properties<P ...>> {
+    static constexpr auto value = saga::core::template_index_v<Property, P...>;
+  };
+
+  template<template<class> class Property, class Properties>
+  static constexpr auto property_index_v = property_index<Property, Properties>::value;
 
   /// Container for the given backend
   template <class T, saga::backend Backend> struct container;
