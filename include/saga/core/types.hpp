@@ -79,6 +79,26 @@ namespace saga {
         typename change_type_descriptor_backend<NewBackend,
                                                 TypeDescriptor>::type;
 
+    template <class TypeDescriptor> struct switch_type_descriptor_backend;
+
+    template <class FloatType, class IntType>
+    struct switch_type_descriptor_backend<
+        saga::core::type_descriptor<saga::backend::CPU, FloatType, IntType>> {
+      using type =
+          saga::core::type_descriptor<saga::backend::CUDA, FloatType, IntType>;
+    };
+
+    template <class FloatType, class IntType>
+    struct switch_type_descriptor_backend<
+        saga::core::type_descriptor<saga::backend::CUDA, FloatType, IntType>> {
+      using type =
+          saga::core::type_descriptor<saga::backend::CPU, FloatType, IntType>;
+    };
+
+    template <class TypeDescriptor>
+    using switch_type_descriptor_backend_t =
+        typename switch_type_descriptor_backend<TypeDescriptor>::type;
+
     /// Check if the input type is a valid type descriptor
     template <class T> struct is_valid_type_descriptor : std::false_type {};
 
@@ -90,6 +110,16 @@ namespace saga {
     /// Check if the input type is a valid type descriptor
     template <>
     struct is_valid_type_descriptor<cpu::double_float_precision>
+        : std::true_type {};
+
+    /// Check if the input type is a valid type descriptor
+    template <>
+    struct is_valid_type_descriptor<cuda::single_float_precision>
+        : std::true_type {};
+
+    /// Check if the input type is a valid type descriptor
+    template <>
+    struct is_valid_type_descriptor<cuda::double_float_precision>
         : std::true_type {};
 
     /// Check if the input type is a valid type descriptor

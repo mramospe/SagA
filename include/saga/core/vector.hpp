@@ -12,6 +12,51 @@
 
 namespace saga {
 
+  namespace core {
+
+    namespace detail {
+
+      /// Helper class to avoid errors with nvcc and constexpr functions
+      template <class T, saga::backend Backend> struct allocator_t;
+
+      template <class T> struct allocator_t<T, saga::backend::CPU> {
+
+        using value_type = T;
+        using pointer_type = value_type *;
+        using size_type = std::size_t;
+
+        __saga_core_function__ pointer_type operator()(size_type n) const {
+          return n > 0 ? new value_type[n] : nullptr;
+        }
+      };
+
+      template <class T> struct allocator_t<T, saga::backend::CUDA> {
+
+        using value_type = T;
+        using pointer_type = value_type *;
+        using size_type = std::size_t;
+
+        __saga_core_function__ pointer_type
+        operator()([[maybe_unused]] size_type n) const {
+#if SAGA_CUDA_ENABLED
+          pointer_type ptr;
+
+          cudaMalloc(&ptr, n * sizeof(value_type));
+
+          return ptr;
+#else
+          SAGA_THROW_CUDA_ERROR;
+#endif
+        }
+      };
+    } // namespace detail
+
+    template <class T, saga::backend Backend>
+    __saga_core_function__ constexpr auto allocate(std::size_t n) {
+      return detail::allocator_t<T, Backend>{}(n);
+    }
+  } // namespace core
+
   template <class T, saga::backend Backend> class vector {
 
     static_assert(std::is_arithmetic_v<T>,
@@ -30,10 +75,13 @@ namespace saga {
     using const_reference_type = value_type const &;
     using size_type = std::size_t;
 
+    static constexpr auto backend = Backend;
+
     vector() = default;
     __saga_core_function__ vector(size_type n) { resize(n); };
     __saga_core_function__ vector(vector const &other)
-        : m_data{allocate(other.m_size)}, m_size{other.m_size} {
+        : m_data{saga::core::allocate<value_type, backend>(other.m_size)},
+          m_size{other.m_size} {
 
       for (auto i = 0u; i < other.m_size; ++i)
         this->operator[](i) = other[i];
@@ -44,11 +92,11 @@ namespace saga {
       other.m_data = nullptr;
       other.m_size = 0;
     }
-    __saga_core_function__ vector &operator=(vector const &other) {
+    vector &operator=(vector const &other) {
 
       clear();
 
-      m_data = allocate(other.m_size);
+      m_data = saga::core::allocate<value_type, backend>(other.m_size);
       m_size = other.m_size;
 
       for (auto i = 0u; i < other.m_size; ++i)
@@ -56,7 +104,7 @@ namespace saga {
 
       return *this;
     }
-    __saga_core_function__ vector &operator=(vector &&other) {
+    vector &operator=(vector &&other) {
 
       clear();
 
@@ -65,6 +113,8 @@ namespace saga {
 
       other.m_data = nullptr;
       other.m_size = 0;
+
+      return *this;
     }
 
     __saga_core_function__ const_reference_type operator[](size_type i) const {
@@ -81,7 +131,7 @@ namespace saga {
 
       clear();
 
-      m_data = allocate(n);
+      m_data = saga::core::allocate<value_type, backend>(n);
       m_size = n;
     }
 
@@ -89,15 +139,17 @@ namespace saga {
 
     __saga_core_function__ void clear() {
 
-      if constexpr (Backend == saga::backend::CPU) {
+      if constexpr (backend == saga::backend::CPU) {
         if (m_data) {
           m_size = 0;
           delete[] m_data;
         }
       } else {
 #if SAGA_CUDA_ENABLED
-        if (m_data)
+        if (m_data) {
+          m_size = 0;
           cudaFree(m_data);
+        }
 #else
         SAGA_THROW_CUDA_ERROR;
 #endif
@@ -105,21 +157,6 @@ namespace saga {
     }
 
   private:
-    __saga_core_function__ static pointer_type allocate(size_type n) {
-
-      if constexpr (Backend == saga::backend::CPU)
-        return n > 0 ? new value_type[n] : nullptr;
-      else {
-#if SAGA_CUDA_ENABLED
-        pointer_type ptr;
-        cudaMalloc(&ptr, n * sizeof(T));
-        return ptr;
-#else
-        SAGA_THROW_CUDA_ERROR;
-#endif
-      }
-    }
-
     pointer_type m_data = nullptr;
     size_type m_size = 0;
   };
@@ -133,6 +170,7 @@ namespace saga {
 
     auto code = cudaMemcpy(out.data(), other.data(), other.size() * sizeof(T),
                            cudaMemcpyHostToDevice);
+
     if (code != cudaSuccess)
       throw std::runtime_error("Unable to copy vector to the device");
 

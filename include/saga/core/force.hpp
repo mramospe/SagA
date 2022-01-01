@@ -21,6 +21,7 @@ namespace saga::core {
     using base_type::base_type;
 
     using float_type = typename TypeDescriptor::float_type;
+    using type_descriptor = TypeDescriptor;
 
     // Forward declarations
     class value_type;
@@ -31,7 +32,33 @@ namespace saga::core {
     public:
       using base_type = saga::core::value<forces>;
 
-      using base_type::base_type;
+      __saga_core_function__
+      value_type(saga::core::underlying_value_type_t<
+                     saga::property::x<type_descriptor>> &&vx,
+                 saga::core::underlying_value_type_t<
+                     saga::property::y<type_descriptor>> &&vy,
+                 saga::core::underlying_value_type_t<
+                     saga::property::z<type_descriptor>> &&vz)
+          : base_type(std::forward<saga::core::underlying_value_type_t<
+                          saga::property::x<type_descriptor>>>(vx),
+                      std::forward<saga::core::underlying_value_type_t<
+                          saga::property::y<type_descriptor>>>(vy),
+                      std::forward<saga::core::underlying_value_type_t<
+                          saga::property::z<type_descriptor>>>(vz)) {}
+      __saga_core_function__
+      value_type(saga::core::underlying_value_type_t<
+                     saga::property::x<type_descriptor>> const &vx,
+                 saga::core::underlying_value_type_t<
+                     saga::property::y<type_descriptor>> const &vy,
+                 saga::core::underlying_value_type_t<
+                     saga::property::z<type_descriptor>> const &vz)
+          : base_type(vx, vy, vz) {}
+
+      value_type() = default;
+      value_type(value_type const &) = default;
+      value_type(value_type &&) = default;
+      value_type &operator=(value_type &&) = default;
+      value_type &operator=(value_type const &) = default;
 
       __saga_core_function__ value_type &operator=(proxy_type const &p) {
         base_type::operator=(p);
@@ -76,18 +103,17 @@ namespace saga::core {
       using base_type = saga::core::proxy<forces>;
       using container_type = forces;
       using container_pointer_type = container_type *;
+      using size_type = typename base_type::size_type;
 
-      using base_type::base_type;
+      proxy_type() = delete;
+      proxy_type(proxy_type const &) = default;
+      proxy_type(proxy_type &) = default;
+      __saga_core_function__ proxy_type(container_pointer_type cont,
+                                        size_type idx)
+          : base_type{cont, idx} {}
 
-      __saga_core_function__ proxy_type &operator=(proxy_type const &p) {
-        base_type::operator=(p);
-        return *this;
-      }
-
-      __saga_core_function__ proxy_type &operator=(proxy_type &&p) {
-        base_type::operator=(p);
-        return *this;
-      }
+      proxy_type &operator=(proxy_type const &) = default;
+      proxy_type &operator=(proxy_type &&) = default;
 
       __saga_core_function__ proxy_type &operator=(value_type const &p) {
         base_type::operator=(p);
@@ -133,19 +159,17 @@ namespace saga::core {
       using base_type = saga::core::const_proxy<forces>;
       using container_type = forces;
       using container_pointer_type = container_type const *;
+      using size_type = typename base_type::size_type;
 
-      using base_type::base_type;
+      const_proxy_type() = delete;
+      const_proxy_type(const_proxy_type const &) = default;
+      const_proxy_type(const_proxy_type &) = default;
+      __saga_core_function__ const_proxy_type(container_pointer_type cont,
+                                              size_type idx)
+          : base_type{cont, idx} {}
 
-      __saga_core_function__ const_proxy_type &
-      operator=(const_proxy_type const &p) {
-        base_type::operator=(p);
-        return *this;
-      }
-
-      __saga_core_function__ const_proxy_type &operator=(const_proxy_type &&p) {
-        base_type::operator=(p);
-        return *this;
-      }
+      const_proxy_type &operator=(const_proxy_type const &p) = default;
+      const_proxy_type &operator=(const_proxy_type &&p) = default;
 
       __saga_core_function__ auto const &get_x() const {
         return this->template get<saga::property::x>();

@@ -79,7 +79,8 @@ namespace saga::core::keywords {
     // it seems we can not inherit from the variant type and expect std::visit
     // to work correctly in GCC 9.3.0
     detail::expand_variant_from_type_descriptors_float_t<
-        std::variant<>, saga::cpu::sf, saga::cpu::df>
+        std::variant<>, saga::cpu::sf, saga::cpu::df, saga::cuda::sf,
+        saga::cuda::df>
         variant;
   };
 
@@ -89,7 +90,8 @@ namespace saga::core::keywords {
     // it seems we can not inherit from the variant type and expect std::visit
     // to work correctly in GCC 9.3.0
     detail::expand_variant_from_type_descriptors_int_t<
-        std::variant<>, saga::cpu::sf, saga::cpu::df>
+        std::variant<>, saga::cpu::sf, saga::cpu::df, saga::cuda::sf,
+        saga::cuda::df>
         variant;
   };
 
@@ -156,6 +158,12 @@ namespace saga::core::keywords {
             typename RequiredKeyword::underlying_keyword_type>...,
         detail::keyword_numeric_type_t<
             TypeDescriptor, typename Keyword::underlying_keyword_type>...>;
+
+    keywords_parser() = default;
+    keywords_parser(keywords_parser const &) = default;
+    keywords_parser(keywords_parser &&) = default;
+    keywords_parser &operator=(keywords_parser const &) = default;
+    keywords_parser &operator=(keywords_parser &&) = default;
 
     /// Constructor from the keyword arguments and a tuple of default values
     template <class... Default, class... K>

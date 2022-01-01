@@ -55,6 +55,7 @@ namespace saga {
                              saga::properties<Property...>>
         : public particle_container_base_type<TypeDescriptor, Shape,
                                               Property...> {
+
     public:
       /// Type descriptor
       using type_descriptor = TypeDescriptor;
@@ -75,14 +76,6 @@ namespace saga {
                                  NewBackend, type_descriptor>,
                              Shape, saga::properties<Property...>>;
 
-#if SAGA_CUDA_ENABLED
-      /// Return this container with the data allocated in the device
-      template <saga::backend NewBackend>
-      type_with_backend<NewBackend> to_backend() const {
-        return base_type::template to_backend<NewBackend>();
-      }
-#endif
-
       // forward declarations
       class value_type;
       class proxy_type;
@@ -94,7 +87,18 @@ namespace saga {
         using base_type = saga::core::value<particle_container>;
         using shape_type = particle_container::shape_type;
 
-        using base_type::base_type;
+        template <class... T>
+        __saga_core_function__ value_type(T &&...v)
+            : base_type{std::forward<T>(v)...} {}
+
+        template <class... T>
+        __saga_core_function__ value_type(T const &...v) : base_type{v...} {}
+
+        value_type() = default;
+        value_type(value_type const &) = default;
+        value_type(value_type &&) = default;
+        value_type &operator=(value_type &&) = default;
+        value_type &operator=(value_type const &) = default;
 
         __saga_core_function__ value_type &operator=(proxy_type const &p) {
           base_type::operator=(p);
@@ -200,18 +204,17 @@ namespace saga {
         using container_type = particle_container;
         using container_pointer_type = container_type *;
         using shape_type = container_type::shape_type;
+        using size_type = typename base_type::size_type;
 
-        using base_type::base_type;
+        proxy_type() = delete;
+        proxy_type(proxy_type const &) = default;
+        proxy_type(proxy_type &) = default;
+        __saga_core_function__ proxy_type(container_pointer_type cont,
+                                          size_type idx)
+            : base_type{cont, idx} {}
 
-        __saga_core_function__ proxy_type &operator=(proxy_type const &p) {
-          base_type::operator=(p);
-          return *this;
-        }
-
-        __saga_core_function__ proxy_type &operator=(proxy_type &&p) {
-          base_type::operator=(p);
-          return *this;
-        }
+        proxy_type &operator=(proxy_type const &) = default;
+        proxy_type &operator=(proxy_type &&) = default;
 
         __saga_core_function__ proxy_type &operator=(value_type const &p) {
           base_type::operator=(p);
@@ -312,19 +315,18 @@ namespace saga {
         using container_type = particle_container;
         using container_pointer_type = container_type const *;
         using shape_type = container_type::shape_type;
+        using size_type = typename base_type::size_type;
 
-        using base_type::base_type;
+        const_proxy_type() = delete;
+        const_proxy_type(const_proxy_type const &) = default;
+        const_proxy_type(const_proxy_type &) = default;
+        __saga_core_function__ const_proxy_type(container_pointer_type cont,
+                                                size_type idx)
+            : base_type{cont, idx} {}
 
-        __saga_core_function__ const_proxy_type &
-        operator=(proxy_type const &p) {
-          base_type::operator=(p);
-          return *this;
-        }
+        const_proxy_type &operator=(const_proxy_type const &p) = default;
 
-        __saga_core_function__ const_proxy_type &operator=(proxy_type &&p) {
-          base_type::operator=(p);
-          return *this;
-        }
+        const_proxy_type &operator=(const_proxy_type &&p) = default;
 
         __saga_core_function__ auto const &get_x() const {
           return this->template get<saga::property::x>();

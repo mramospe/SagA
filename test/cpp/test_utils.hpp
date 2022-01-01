@@ -149,6 +149,12 @@ namespace saga::test {
 
     return errors;
   }
+
+  /// Check if two numbers are close given the
+  bool is_close(double a, double b, double rtol = 1e-5, double atol = 1e-8) {
+
+    return std::abs(a - b) < std::abs(rtol * b) + std::abs(atol);
+  }
 } // namespace saga::test
 
 #define SAGA_TEST_UTILS_ADD_TEST(collector, function)                          \

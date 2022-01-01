@@ -109,6 +109,7 @@ namespace saga::core {
       using value_type = value<Container, fields_type>;
       using const_proxy_type = const_proxy<Container, fields_type>;
 
+      proxy() = delete;
       /// Build the proxy from the container and the index
       __saga_core_function__ proxy(container_pointer_type cont, size_type idx)
           : m_ptr{cont}, m_idx{idx} {}
@@ -216,6 +217,7 @@ namespace saga::core {
 
       using proxy_type = proxy<Container, fields_type>;
 
+      const_proxy() = delete;
       /// Build the proxy from the container and the index
       __saga_core_function__ const_proxy(container_pointer_type cont,
                                          size_type idx)

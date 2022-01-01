@@ -7,6 +7,66 @@
 
 #include <type_traits>
 
+#if SAGA_CUDA_ENABLED
+namespace saga {
+
+  namespace core::detail {
+
+    template <saga::backend NewBackend> struct to_backend_t;
+
+    template <> struct to_backend_t<saga::backend::CPU> {
+
+      template <class Container, template <class> class... Field>
+      auto operator()(Container const &container,
+                      saga::properties<Field...>) const {
+
+        using type_descriptor = typename Container::type_descriptor;
+
+        static_assert((type_descriptor::backend != saga::backend::CPU),
+                      "Sending a container to the same backend");
+
+        typename Container::template type_with_backend<saga::backend::CPU> out;
+
+        (out.template set<Field>(
+             saga::to_host(container.template get<Field>())),
+         ...);
+
+        return out;
+      }
+    };
+
+    template <> struct to_backend_t<saga::backend::CUDA> {
+
+      template <class Container, template <class> class... Field>
+      auto operator()(Container const &container,
+                      saga::properties<Field...>) const {
+
+        using type_descriptor = typename Container::type_descriptor;
+
+        static_assert((type_descriptor::backend != saga::backend::CUDA),
+                      "Sending a container to the same backend");
+
+        typename Container::template type_with_backend<saga::backend::CUDA> out;
+
+        (out.template set<Field>(
+             saga::to_device(container.template get<Field>())),
+         ...);
+
+        return out;
+      }
+    };
+
+  } // namespace core::detail
+
+  template <saga::backend NewBackend, class Container>
+  auto to_backend(Container const &container) {
+
+    return saga::core::detail::to_backend_t<NewBackend>{}(
+        container, typename Container::fields_type{});
+  }
+} // namespace saga
+#endif
+
 namespace saga::core {
 
   /*!\brief Standard container for objects with fields
@@ -17,6 +77,10 @@ namespace saga::core {
       : protected saga::core::tuple<saga::core::container_t<
             saga::core::underlying_value_type_t<Field<TypeDescriptor>>,
             TypeDescriptor::backend>...> {
+
+#if SAGA_CUDA_ENABLED
+    template <saga::backend> friend class saga::core::detail::to_backend_t;
+#endif
 
     static_assert(sizeof...(Field) > 0,
                   "Containers without fields make no sense");
@@ -34,6 +98,16 @@ namespace saga::core {
     using fields_type = saga::properties<Field...>;
 
     using size_type = std::size_t;
+
+#if SAGA_CUDA_ENABLED
+    /// Alias to a type where the backend has been switched to a one different
+    /// from the previous
+    template <saga::backend NewBackend>
+    using type_with_backend =
+        container_with_fields<saga::core::change_type_descriptor_backend_t<
+                                  NewBackend, type_descriptor>,
+                              Field...>;
+#endif
 
     container_with_fields() = default;
     /// Construct the container with "n" elements
@@ -176,53 +250,14 @@ namespace saga::core {
 
     /// Set the container associated to the given field
     template <template <class> class F, class Container>
-    void set(Container &&v) const {
-      saga::core::get<saga::core::template_index_v<F, Field...>>(*this) = v;
+    void set(Container &&v) {
+      saga::core::get<saga::core::template_index_v<F, Field...>>(*this) =
+          std::forward<Container>(v);
     }
 
     template <template <class> class F, class Container>
-    void set(Container const &v) const {
+    void set(Container const &v) {
       saga::core::get<saga::core::template_index_v<F, Field...>>(*this) = v;
     }
-
-#if SAGA_CUDA_ENABLED
-  protected:
-    /*\brief
-
-     \warning: Meant to be used by inherited containers only
-    */
-    template <saga::backend NewBackend> auto to_backend() const {
-
-      static_assert(NewBackend != type_descriptor::backend,
-                    "Attempt to send data to the same backend");
-
-      if constexpr (NewBackend == saga::backend::CUDA)
-        return build_container_in_new_backend<NewBackend, Field...>(
-            &saga::to_device);
-      else
-        return build_container_in_new_backend<NewBackend, Field...>(
-            &saga::to_host);
-    }
-
-  private:
-    /// Alias to a type where the backend has been switched to a one different
-    /// from the previous
-    template <saga::backend NewBackend>
-    using type_with_backend =
-        container_with_fields<saga::core::change_type_descriptor_backend_t<
-                                  NewBackend, TypeDescriptor>,
-                              Field...>;
-
-    template <saga::backend NewBackend, class Function,
-              template <class> class... F>
-    auto build_container_in_new_backend(Function &&function) const {
-
-      type_with_backend<NewBackend> cont;
-
-      (cont.template set<F>(function(this->get<F>())), ...);
-
-      return cont;
-    }
-#endif
   };
 } // namespace saga::core

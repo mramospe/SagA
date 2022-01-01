@@ -98,7 +98,8 @@ namespace saga {
         saga::physics::is_available_interaction_v<Interaction, properties_type>,
         void>
     add_interaction(Args &&...args) {
-      m_interactions.push_back(Interaction<type_descriptor>{args...});
+      m_interactions.push_back(
+          Interaction<type_descriptor>{std::forward<Args>(args)...});
     }
 
     /*!\brief Retrieve the set of particles
@@ -134,7 +135,7 @@ namespace saga {
         // place where the point-to-point interactions are evaluated
         for (auto inter : m_interactions)
           std::visit(
-              [this, &forces](auto &&arg) -> void {
+              [this, &forces](auto const &arg) -> void {
                 saga::core::fill_forces<type_descriptor::backend>::evaluate(
                     forces, arg, m_particles);
               },

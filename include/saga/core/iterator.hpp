@@ -4,16 +4,13 @@
 namespace saga::core {
 
   // forward declarations
-  template<class>
-  class proxy_iterator;
-  template<class>
-  class const_proxy_iterator;
+  template <class> class proxy_iterator;
+  template <class> class const_proxy_iterator;
 
   /* \brief A container proxy type
      This object is returned by containers when accessing a single element
   */
-  template<class Container>
-  class proxy_iterator {
+  template <class Container> class proxy_iterator {
 
   public:
     /// Container type
@@ -26,9 +23,10 @@ namespace saga::core {
 
     friend class const_proxy_iterator<container_type>;
 
+    proxy_iterator() = delete;
     /// Build the iterator from the container and the index
     proxy_iterator(container_type *cont, size_type idx)
-      : m_ptr{cont}, m_idx{idx} {}
+        : m_ptr{cont}, m_idx{idx} {}
     proxy_iterator(const proxy_iterator &other) = default;
     proxy_iterator(proxy_iterator &&other) = default;
     proxy_iterator &operator=(proxy_iterator const &) = default;
@@ -116,8 +114,7 @@ namespace saga::core {
   /* \brief A container proxy type
      This object is returned by containers when accessing a single element
   */
-  template<class Container>
-  class const_proxy_iterator {
+  template <class Container> class const_proxy_iterator {
 
   public:
     /// Container type
@@ -130,9 +127,10 @@ namespace saga::core {
 
     friend class proxy_iterator<container_type>;
 
+    const_proxy_iterator() = delete;
     /// Build the proxy from the container and the index
     const_proxy_iterator(container_pointer_type cont, size_type idx)
-      : m_ptr{cont}, m_idx{idx} {}
+        : m_ptr{cont}, m_idx{idx} {}
     const_proxy_iterator(const const_proxy_iterator &) = default;
     const_proxy_iterator(const_proxy_iterator &&) = default;
     const_proxy_iterator &operator=(const_proxy_iterator const &) = default;
@@ -220,4 +218,4 @@ namespace saga::core {
     /// Index in the container
     size_type m_idx = 0;
   };
-}
+} // namespace saga::core

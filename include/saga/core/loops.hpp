@@ -11,8 +11,7 @@ namespace saga::core {
 
     /// Core function to integrate the position of a particle
     template <class Proxy, class FloatType>
-    __saga_core_function__ void integrate_position(Proxy &p,
-                                                   FloatType delta_t) {
+    __saga_core_function__ void integrate_position(Proxy p, FloatType delta_t) {
 
       p.set_x(p.get_x() + p.get_px() / p.get_mass() * 0.5 * delta_t);
       p.set_y(p.get_y() + p.get_py() / p.get_mass() * 0.5 * delta_t);
@@ -22,10 +21,10 @@ namespace saga::core {
 
     /// Core function to integrate the momenta and determine the new position of
     /// a particle
-    template <class Proxy, class Force, class FloatType>
+    template <class ParticleProxy, class ForceProxy, class FloatType>
     __saga_core_function__ void
-    integrate_momenta_and_position(Proxy particle, Force const &force,
-                                   FloatType delta_t) {
+    integrate_momenta_and_position(ParticleProxy particle,
+                                   ForceProxy const force, FloatType delta_t) {
 
       auto mass =
           particle.get_mass(); // whatever we do, we must preserve the mass
@@ -58,7 +57,10 @@ namespace saga::core {
                          [[maybe_unused]] FloatType delta_t) {
 #if SAGA_CUDA_ENABLED
       saga::core::cuda::apply_simple_function_inplace(
-          particles, &detail::integrate_position, delta_t);
+          particles,
+          &detail::integrate_position<typename Particles::proxy_type,
+                                      decltype(delta_t)>,
+          delta_t);
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");
@@ -72,8 +74,8 @@ namespace saga::core {
 
   template <> struct fill_forces<backend::CPU> {
 
-    template <class Forces, class Function, class Particles>
-    static void evaluate(Forces &forces, Function &&function,
+    template <class Forces, class Functor, class Particles>
+    static void evaluate(Forces &forces, Functor const &function,
                          Particles const &particles) {
 
       for (auto i = 0u; i < particles.size(); ++i) {
@@ -106,9 +108,9 @@ namespace saga::core {
   // remain constant throughout the execution of the processes.
   template <> struct fill_forces<backend::CUDA> {
 
-    template <class Forces, class Function, class Particles>
+    template <class Forces, class Functor, class Particles>
     static void evaluate([[maybe_unused]] Forces &forces,
-                         [[maybe_unused]] Function &&force_function,
+                         [[maybe_unused]] Functor const &force_function,
                          [[maybe_unused]] Particles const &particles) {
 
 #if SAGA_CUDA_ENABLED
@@ -120,7 +122,7 @@ namespace saga::core {
                   sizeof(typename Particles::value_type);
 
       saga::core::cuda::
-          add_forces<<<SAGA_CUDA_MAX_THREADS_PER_BLOCK_X, nblocks, smem>>>(
+          add_forces<<<nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X, smem>>>(
               tile_size, forces, force_function, particles);
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
@@ -148,17 +150,21 @@ namespace saga::core {
   template <> struct integrate_momenta_and_position<backend::CUDA> {
 
     template <class Particles, class Forces, class FloatType>
-    static __saga_core_function__ void
-    evaluate([[maybe_unused]] Particles &particles,
-             [[maybe_unused]] Forces const &forces,
-             [[maybe_unused]] FloatType delta_t) {
+    static void evaluate([[maybe_unused]] Particles &particles,
+                         [[maybe_unused]] Forces const &forces,
+                         [[maybe_unused]] FloatType delta_t) {
 
 #if SAGA_CUDA_ENABLED
       auto N = particles.size();
       auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
                      (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
-      saga::core::cuda::apply_contiguous_function_inplace(
-          particles, forces, &detail::integrate_momenta_and_position, delta_t);
+      saga::core::cuda::apply_contiguous_function_inplace<<<
+          nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
+          particles, forces,
+          &detail::integrate_momenta_and_position<
+              typename Particles::proxy_type, typename Forces::const_proxy_type,
+              decltype(delta_t)>,
+          delta_t);
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");
