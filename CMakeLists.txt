@@ -98,7 +98,7 @@ endif(INSTALL_EXAMPLES)
 if(INSTALL_TESTS)
 
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test/cpp)
-    include_directories(include test/cpp)
+    include_directories(include test/include)
 
     file(GLOB TEST_SOURCES ${PROJECT_SOURCE_DIR}/test/cpp/*.cpp)
 

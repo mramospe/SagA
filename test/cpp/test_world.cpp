@@ -133,7 +133,7 @@ int main() {
   saga::test::collector world_collector("world");
   SAGA_TEST_UTILS_ADD_TEST(world_collector, test_gravitational);
 
-  saga::test::collector collisions_collector("world");
+  saga::test::collector collisions_collector("collisions");
   SAGA_TEST_UTILS_ADD_TEST(collisions_collector, test_collisions_elastic);
   SAGA_TEST_UTILS_ADD_TEST(collisions_collector, test_collisions_simple_merge);
 
