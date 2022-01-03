@@ -63,6 +63,7 @@ namespace saga::core {
     static void evaluate([[maybe_unused]] Particles &particles,
                          [[maybe_unused]] FloatType delta_t) {
 #if SAGA_CUDA_ENABLED
+
       auto particles_view = saga::core::make_container_view(particles);
 
       saga::core::cuda::apply_simple_functor_inplace(
@@ -76,13 +77,18 @@ namespace saga::core {
 
   /// Functor that fills an array of forces taking into account point-to-point
   /// interactions
-  template <backend Backend> struct fill_forces;
+  template <backend Backend> struct iterate_forces;
 
-  template <> struct fill_forces<backend::CPU> {
+  template <> struct iterate_forces<backend::CPU> {
+
+    template <class Forces> static void set_to_zero(Forces &forces) {
+      for (auto f : forces)
+        f = {0.f, 0.f, 0.f};
+    }
 
     template <class Forces, class Functor, class Particles>
-    static void evaluate(Forces &forces, Functor const &function,
-                         Particles const &particles) {
+    static void fill_from_interaction(Forces &forces, Functor const &function,
+                                      Particles const &particles) {
 
       for (auto i = 0u; i < particles.size(); ++i) {
 
@@ -112,27 +118,58 @@ namespace saga::core {
   // pass the number of tiles as a configuration parameter. This configuration
   // could be specified during the construction of the saga::world object and
   // remain constant throughout the execution of the processes.
-  template <> struct fill_forces<backend::CUDA> {
+  template <> struct iterate_forces<backend::CUDA> {
 
-    template <class Forces, class Functor, class Particles>
-    static void evaluate([[maybe_unused]] Forces &forces,
-                         [[maybe_unused]] Functor const &force_function,
-                         [[maybe_unused]] Particles const &particles) {
+    template <class Forces>
+    static void set_to_zero([[maybe_unused]] Forces &forces) {
 
 #if SAGA_CUDA_ENABLED
+      auto N = forces.size();
+      auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
+                     (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
+
+      auto forces_view = saga::core::make_container_view(forces);
+
+      saga::core::cuda::
+          set_forces_to_zero<<<nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
+              forces_view);
+
+      auto code = cudaPeekAtLastError();
+      if (code != cudaSuccess)
+        throw std::runtime_error("Failed to set forces to zero. Reason: " +
+                                 std::string{cudaGetErrorString(code)});
+#else
+      throw std::runtime_error("Attempt to call a method for the CUDA backend "
+                               "when it is not enabled");
+#endif
+    }
+
+    template <class Forces, class Functor, class Particles>
+    static void
+    fill_from_interaction([[maybe_unused]] Forces &forces,
+                          [[maybe_unused]] Functor const &force_function,
+                          [[maybe_unused]] Particles const &particles) {
+
+#if SAGA_CUDA_ENABLED
+
       auto N = particles.size();
       auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
                      (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
-      auto tile_size = N / 10; // TODO: this can be tunned
-      auto smem = SAGA_CUDA_MAX_THREADS_PER_BLOCK_X *
-                  sizeof(typename Particles::value_type);
 
       auto particles_view = saga::core::make_container_view(particles);
       auto forces_view = saga::core::make_container_view(forces);
 
+      auto smem = SAGA_CUDA_MAX_THREADS_PER_BLOCK_X *
+                  sizeof(typename decltype(particles_view)::value_type);
+
       saga::core::cuda::
           add_forces<<<nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X, smem>>>(
-              tile_size, forces_view, force_function, particles_view);
+              forces_view, force_function, particles_view);
+
+      auto code = cudaPeekAtLastError();
+      if (code != cudaSuccess)
+        throw std::runtime_error("Failed to determine accelerations. Reason: " +
+                                 std::string{cudaGetErrorString(code)});
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");
@@ -175,6 +212,12 @@ namespace saga::core {
           nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
           particles_view, forces_view,
           detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
+
+      auto code = cudaPeekAtLastError();
+      if (code != cudaSuccess)
+        throw std::runtime_error(
+            "Unable to integrate momenta and position. Reason: " +
+            std::string{cudaGetErrorString(code)});
 #else
       throw std::runtime_error("Attempt to call a method for the CUDA backend "
                                "when it is not enabled");

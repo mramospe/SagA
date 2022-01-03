@@ -13,6 +13,8 @@
 #include <variant>
 #include <vector>
 
+#include <iostream>
+
 namespace saga {
 
   /*!\brief Class representing a collection of particles and the interactions
@@ -120,9 +122,13 @@ namespace saga {
 
       for (auto s = 0u; s < steps; ++s) {
 
+        // resize the vector of forces to match the length of the vector of
+        // particles
+        forces.resize(m_particles.size());
+
         // set all forces to zero
-        for (auto f : forces)
-          f = {0.f, 0.f, 0.f};
+        saga::core::iterate_forces<type_descriptor::backend>::set_to_zero(
+            forces);
 
         // first estimation of the positions
         saga::core::integrate_position<type_descriptor::backend>::evaluate(
@@ -136,8 +142,8 @@ namespace saga {
         for (auto inter : m_interactions)
           std::visit(
               [this, &forces](auto const &arg) -> void {
-                saga::core::fill_forces<type_descriptor::backend>::evaluate(
-                    forces, arg, m_particles);
+                saga::core::iterate_forces<type_descriptor::backend>::
+                    fill_from_interaction(forces, arg, m_particles);
               },
               inter);
 

@@ -93,10 +93,14 @@ namespace saga {
     }
     vector &operator=(vector const &other) {
 
-      clear();
+      // avoid reallocating the vector if the size is the same
+      if (m_size != other.m_size) {
 
-      m_data = saga::core::allocate<value_type, backend>(other.m_size);
-      m_size = other.m_size;
+        clear();
+
+        m_data = saga::core::allocate<value_type, backend>(other.m_size);
+        m_size = other.m_size;
+      }
 
       copy_already_allocated(other);
 
@@ -127,10 +131,14 @@ namespace saga {
 
     __saga_core_function__ void resize(size_type n) {
 
-      clear();
+      // avoid reallocating the vector if the size is the same
+      if (n != m_size) {
 
-      m_data = saga::core::allocate<value_type, backend>(n);
-      m_size = n;
+        clear();
+
+        m_data = saga::core::allocate<value_type, backend>(n);
+        m_size = n;
+      }
     }
 
     __saga_core_function__ constexpr auto size() const { return m_size; }
@@ -145,6 +153,7 @@ namespace saga {
       } else {
 #if SAGA_CUDA_ENABLED
         if (m_data) {
+
           m_size = 0;
           cudaFree(m_data);
         }

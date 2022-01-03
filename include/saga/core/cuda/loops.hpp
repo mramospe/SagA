@@ -9,7 +9,7 @@ namespace saga::core::cuda {
   namespace detail {
     template <class ParticlesView, class Functor, class... Args>
     __global__ void apply_simple_functor_inplace(ParticlesView particles,
-                                                 Functor const &functor,
+                                                 Functor functor,
                                                  Args... args) {
       auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
       if (gtid < particles.size())
@@ -21,7 +21,7 @@ namespace saga::core::cuda {
             class... Args>
   __global__ void apply_contiguous_functor_inplace(ParticlesView particles,
                                                    ConstForcesView forces,
-                                                   Functor const &functor,
+                                                   Functor functor,
                                                    Args... args) {
     auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gtid < particles.size())
@@ -50,10 +50,19 @@ namespace saga::core::cuda {
           std::string{cudaGetErrorString(code)});
   }
 
+  /// Set forces to zero
+  template <class ForcesView>
+  __global__ void set_forces_to_zero(ForcesView forces) {
+
+    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (gtid < forces.size())
+      forces[gtid] = {0.f, 0.f, 0.f};
+  }
+
   /// Kernel functor to evaluate a functor that calculates the force
   template <class ForcesView, class Functor, class ConstParticlesView>
-  __global__ void add_forces(std::size_t tile_size, ForcesView &forces,
-                             Functor const &force_functor,
+  __global__ void add_forces(ForcesView forces, Functor force_functor,
                              ConstParticlesView particles) {
 
     extern __shared__ char shared_memory[];
@@ -70,20 +79,25 @@ namespace saga::core::cuda {
 
     typename ForcesView::value_type acc = {0.f, 0.f, 0.f};
 
-    for (auto i = 0u, tile = 0u; i < particles.size(); i += tile_size, ++tile) {
+    auto ntiles =
+        particles.size() / blockDim.x + (particles.size() % blockDim.x != 0);
+
+    for (auto tile = 0u; tile < ntiles; ++tile) {
 
       auto idx = tile * blockDim.x + threadIdx.x;
 
-      shared_particles[threadIdx.x] = particles[idx];
+      if (idx < particles.size())
+        shared_particles[threadIdx.x] = particles[idx];
 
       __syncthreads();
 
-      if (idx < particles.size()) {
+      if (gtid < particles.size()) {
         for (auto i = 0u; i < blockDim.x; ++i) {
           if (tile * blockDim.x + i == gtid)
             continue;
           else if (tile * blockDim.x + i < particles.size()) {
-            auto r = force_functor(current_particle, shared_particles[i]);
+            auto r =
+                force_functor(current_particle, shared_particles[threadIdx.x]);
             acc.set_x(acc.get_x() + r.get_x());
             acc.set_y(acc.get_y() + r.get_y());
             acc.set_z(acc.get_z() + r.get_z());

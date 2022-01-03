@@ -15,57 +15,30 @@ namespace saga::physics {
   /// Keyword argument for the the soften factor of a central force
   struct soften_factor : public saga::core::keywords::keyword_float {};
 
-  /*!\brief  Base class to define an interaction
-   */
-  template <class TypeDescriptor, template <class> class Charge, class Output,
-            template <class> class... Property>
-  struct interaction {
-
-    /// Charge type
-    using charge_type = Charge<TypeDescriptor>;
-
-    /// Evaluate the force for two objects
-    template <class P0, class P1>
-    __saga_core_function__ Output operator()(P0 const &src,
-                                             P1 const &tgt) const {
-      return force(charge_type{}(src), src.template get<Property>()...,
-                   charge_type{}(tgt), tgt.template get<Property>()...);
-    }
-
-    /// Evaluate the force given the two sets of properties
-    __saga_core_function__ virtual Output force(
-        typename charge_type::float_type,
-        typename Property<TypeDescriptor>::underlying_value_type...,
-        typename charge_type::float_type,
-        typename Property<TypeDescriptor>::underlying_value_type...) const = 0;
-  };
-
   /*!\brief Represent any kind of central force working in the non-relativistic
    * regime
    */
   template <class TypeDescriptor, template <class> class Charge>
   struct central_force_non_relativistic
-      : public saga::physics::interaction<
-            TypeDescriptor, Charge,
-            typename saga::core::forces<TypeDescriptor>::value_type,
-            property::x, property::y, property::z>,
-        public saga::core::keywords::keywords_parser<
+      : public saga::core::keywords::keywords_parser<
             TypeDescriptor, saga::core::keywords::required<field_constant>,
             soften_factor> {
 
-    using interaction_base_type = saga::physics::interaction<
-        TypeDescriptor, Charge,
-        typename saga::core::forces<TypeDescriptor>::value_type, property::x,
-        property::y, property::z>;
     using keywords_parser_base_type = saga::core::keywords::keywords_parser<
         TypeDescriptor, saga::core::keywords::required<field_constant>,
         soften_factor>;
 
+    /// Charge type
+    using charge_type = Charge<TypeDescriptor>;
+    /// Floating-point type
+    using float_type = typename TypeDescriptor::float_type;
+    /// Type of the value returned on call
+    using return_type = typename saga::core::forces<TypeDescriptor>::value_type;
+
     /// Construction from keyword arguments
     template <class... K>
-    central_force_non_relativistic(K &&...v) noexcept
-        : interaction_base_type{},
-          keywords_parser_base_type{
+    central_force_non_relativistic(K &&...v)
+        : keywords_parser_base_type{
               saga::core::make_tuple(
                   soften_factor{saga::numeric_info<TypeDescriptor>::min}),
               std::forward<K>(v)...} {}
@@ -79,18 +52,20 @@ namespace saga::physics {
     central_force_non_relativistic &
     operator=(central_force_non_relativistic &&) = default;
 
-    /// Floating-point type
-    using float_type = typename TypeDescriptor::float_type;
-    /// Value returned by the functor
-    using return_type = typename saga::core::forces<TypeDescriptor>::value_type;
+    /// Evaluate the force given the two sets of properties
+    template <class U, class V>
+    __saga_core_function__ return_type operator()(U const &src,
+                                                  V const &tgt) const {
 
-    /// Evaluate the force
-    __saga_core_function__ return_type force(float_type tgt_charge,
-                                             float_type tgt_x, float_type tgt_y,
-                                             float_type tgt_z,
-                                             float_type src_charge,
-                                             float_type src_x, float_type src_y,
-                                             float_type src_z) const override {
+      auto tgt_charge = charge_type{}(tgt);
+      auto tgt_x = tgt.get_x();
+      auto tgt_y = tgt.get_y();
+      auto tgt_z = tgt.get_z();
+
+      auto src_charge = charge_type{}(src);
+      auto src_x = src.get_x();
+      auto src_y = src.get_y();
+      auto src_z = src.get_z();
 
       float_type const dx = src_x - tgt_x;
       float_type const dy = src_y - tgt_y;
