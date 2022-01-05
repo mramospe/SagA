@@ -1,8 +1,8 @@
 #pragma once
-#include "saga/core/force.hpp"
 #include "saga/core/keywords.hpp"
 #include "saga/core/types.hpp"
 #include "saga/physics/charge.hpp"
+#include "saga/physics/force.hpp"
 #include "saga/physics/quantities.hpp"
 
 #include <cmath>
@@ -33,7 +33,8 @@ namespace saga::physics {
     /// Floating-point type
     using float_type = typename TypeDescriptor::float_type;
     /// Type of the value returned on call
-    using return_type = typename saga::core::forces<TypeDescriptor>::value_type;
+    using return_type =
+        typename saga::physics::forces<TypeDescriptor>::value_type;
 
     /// Construction from keyword arguments
     template <class... K>

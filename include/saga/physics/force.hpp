@@ -3,7 +3,7 @@
 #include "saga/core/properties.hpp"
 #include "saga/core/types.hpp"
 
-namespace saga::core {
+namespace saga::physics {
 
   /*!\brief Container of forces
    */
@@ -230,4 +230,4 @@ namespace saga::core {
     /// End of the container
     auto cend() const { return const_iterator_type(this, this->size()); }
   };
-} // namespace saga::core
+} // namespace saga::physics
