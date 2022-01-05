@@ -54,7 +54,7 @@ namespace saga {
     using configuration_function_type = std::function<void(particles_type &)>;
     /// Type of the function evaluating collisions
     using collision_handler_type =
-        std::function<void(float_type, particles_type &)>;
+        std::function<void(particles_type &, float_type)>;
 
     /// The world is constructed without arguments
     world() = default;
@@ -136,7 +136,7 @@ namespace saga {
 
         // check if with the final step we have collisions and handle them
         if (m_collision_handler)
-          m_collision_handler(delta_t, m_particles);
+          m_collision_handler(m_particles, delta_t);
 
         // place where the point-to-point interactions are evaluated
         for (auto inter : m_interactions)

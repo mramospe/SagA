@@ -1,45 +1,26 @@
 #pragma once
 #include "saga/core/backend.hpp"
-#include "saga/core/vector.hpp"
 #include "saga/core/utils.hpp"
 
 namespace saga {
   template <template <class> class... Property> struct properties {
-    static constexpr auto size = sizeof ... (Property);
+    static constexpr auto size = sizeof...(Property);
   };
 } // namespace saga
 
 namespace saga::core {
 
-  template<template<class> class Property, class Properties>
+  template <template <class> class Property, class Properties>
   struct property_index;
 
-  template<template<class> class Property, template <class> class ... P>
-  struct property_index<Property, saga::properties<P ...>> {
+  template <template <class> class Property, template <class> class... P>
+  struct property_index<Property, saga::properties<P...>> {
     static constexpr auto value = saga::core::template_index_v<Property, P...>;
   };
 
-  template<template<class> class Property, class Properties>
-  static constexpr auto property_index_v = property_index<Property, Properties>::value;
-
-  /// Container for the given backend
-  template <class T, saga::backend Backend> struct container;
-
-  /// Container for the CPU backend
-  template <class T> struct container<T, saga::backend::CPU> {
-    using type = saga::vector<T, saga::backend::CPU>;
-  };
-
-#if SAGA_CUDA_ENABLED
-  /// Container for the CUDA backend
-  template <class T> struct container<T, saga::backend::CUDA> {
-    using type = saga::vector<T, saga::backend::CUDA>;
-  };
-#endif
-
-  /// Alias to get the type of a container for a given backend
-  template <class T, backend Backend>
-  using container_t = typename container<T, Backend>::type;
+  template <template <class> class Property, class Properties>
+  static constexpr auto property_index_v =
+      property_index<Property, Properties>::value;
 
   /*!\brief
    */
@@ -51,8 +32,6 @@ namespace saga::core {
     using property_template = property_configuration<FieldName, T, Backend>;
 
     using underlying_value_type = T;
-    using underlying_container_type =
-        container_t<underlying_value_type, Backend>;
   };
 
   template <class T> struct underlying_value_type {

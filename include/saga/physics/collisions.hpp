@@ -1,4 +1,8 @@
 #pragma once
+#include "saga/core/backend.hpp"
+#include "saga/core/loops.hpp"
+#include "saga/core/types.hpp"
+#include "saga/core/vector.hpp"
 #include "saga/physics/shape.hpp"
 #include <algorithm>
 #include <stdexcept>
@@ -22,7 +26,8 @@ namespace saga::physics::collision {
 
     /// Build the class and compute intermediate quantities
     template <class Proxy>
-    collision_time_evaluator(Proxy const &src, Proxy const &tgt) {
+    __saga_core_function__ collision_time_evaluator(Proxy const &src,
+                                                    Proxy const &tgt) {
 
       static_assert(std::is_same_v<typename Proxy::shape_type,
                                    saga::physics::sphere<TypeDescriptor>>);
@@ -67,10 +72,10 @@ namespace saga::physics::collision {
 
     /// Whether there was a collision given the linear trayectories of the
     /// particles
-    bool has_collision() const { return (m_dt < 0); }
+    __saga_core_function__ bool has_collision() const { return (m_dt < 0); }
 
     /// Calculate the delta-time of a collision
-    float_type dt() const { return m_dt; }
+    __saga_core_function__ float_type dt() const { return m_dt; }
 
   protected:
     /// Delta-time to the collision
@@ -85,28 +90,41 @@ namespace saga::physics::collision {
 
     /// Evaluate the collisions among particles inplace
     template <class Particles>
-    void operator()(float_type delta_t, Particles &particles) const {
+    void operator()(Particles &particles, float_type delta_t) const {
 
       auto size = particles.size();
+
+      saga::vector<bool, TypeDescriptor::backend> invalid(size);
+      saga::core::set_vector_values<TypeDescriptor::backend>::evaluate(invalid,
+                                                                       false);
 
       for (auto i = 0u; i < size; ++i) {
 
         auto pi = particles[i];
 
-        for (auto j = i; j < size; ++j) {
+        for (auto j = i + 1; j < size; ++j) {
+
+          if (invalid[j])
+            continue;
 
           auto pj = particles[j];
 
-          this->operator()(delta_t, pi, pj);
+          if (this->operator()(pi, pj, delta_t)) {
+            // no need to set/check invalid[i] since we will never end-up
+            // processing that particle again
+            invalid[j] = true;
+            break;
+          }
         }
       }
     }
 
-    /// Evaluate the collisions among two particles
+    /// Evaluate the collisions between two particles
     template <class Proxy>
     std::enable_if_t<std::is_same_v<typename Proxy::shape_type,
-                                    saga::physics::sphere<TypeDescriptor>>>
-    operator()(float_type delta_t, Proxy &src, Proxy &tgt) const {
+                                    saga::physics::sphere<TypeDescriptor>>,
+                     bool>
+    operator()(Proxy &src, Proxy &tgt, float_type delta_t) const {
 
       collision_time_evaluator<TypeDescriptor> const dce(src, tgt);
 
@@ -161,7 +179,10 @@ namespace saga::physics::collision {
 
         integrate_position(src);
         integrate_position(tgt);
-      }
+
+        return true;
+      } else
+        return false;
     }
   };
 
@@ -177,11 +198,13 @@ namespace saga::physics::collision {
 
     /// Evaluate the collisions among particles inplace
     template <class Particles>
-    void operator()(float_type delta_t, Particles &particles) const {
+    void operator()(Particles &particles, float_type delta_t) const {
 
       auto size = particles.size();
 
-      std::vector<merged_status> invalid(size, false);
+      saga::vector<merged_status, TypeDescriptor::backend> invalid(size);
+      saga::core::set_vector_values<TypeDescriptor::backend>::evaluate(invalid,
+                                                                       false);
 
       for (auto i = 0u; i < size; ++i) {
 
@@ -200,7 +223,7 @@ namespace saga::physics::collision {
           // if delta_t is too big, we might miss situations where several
           // particles collide at the same time
           if ((invalid[j] =
-                   this->merge_if_close_and_return_status(delta_t, pi, pj)))
+                   this->merge_if_close_and_return_status(pi, pj, delta_t)))
             break;
         }
       }
@@ -223,8 +246,8 @@ namespace saga::physics::collision {
 
     /// Evaluate the collisions among two particles
     template <class Proxy>
-    void operator()(float_type delta_t, Proxy &src, Proxy &tgt) const {
-      merge_if_close_and_return_status(delta_t, src, tgt);
+    void operator()(Proxy &src, Proxy &tgt, float_type delta_t) const {
+      merge_if_close_and_return_status(src, tgt, delta_t);
     }
 
   private:
@@ -234,8 +257,8 @@ namespace saga::physics::collision {
     std::enable_if_t<std::is_same_v<typename Proxy::shape_type,
                                     saga::physics::sphere<TypeDescriptor>>,
                      merged_status>
-    merge_if_close_and_return_status(float_type delta_t, Proxy &src,
-                                     Proxy &tgt) const {
+    merge_if_close_and_return_status(Proxy &src, Proxy &tgt,
+                                     float_type delta_t) const {
 
       collision_time_evaluator<TypeDescriptor> const dce(src, tgt);
 

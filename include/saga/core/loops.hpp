@@ -47,6 +47,29 @@ namespace saga::core {
     };
   } // namespace detail
 
+  template <backend Backend> struct set_vector_values;
+
+  template <> struct set_vector_values<backend::CPU> {
+    template <class Vector>
+    static void evaluate(Vector &v, typename Vector::value_type def) {
+      for (auto i = 0u; i < v.size(); ++i)
+        v[i] = def;
+    }
+  };
+
+  template <> struct set_vector_values<backend::CUDA> {
+    template <class Vector>
+    static void evaluate(Vector &v, typename Vector::value_type def) {
+#if SAGA_CUDA_ENABLED
+      saga::core::cuda::apply_simple_functor_inplace(
+          saga::core::make_vector_view(v), saga::core::cuda::set_vector_value{},
+          def);
+#else
+      SAGA_THROW_CUDA_ERROR;
+#endif
+    }
+  };
+
   /// Functor that integrates the positions
   template <backend Backend> struct integrate_position;
 

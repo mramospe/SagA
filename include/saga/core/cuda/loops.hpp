@@ -7,8 +7,8 @@
 namespace saga::core::cuda {
 
   namespace detail {
-    template <class ParticlesView, class Functor, class... Args>
-    __global__ void apply_simple_functor_inplace(ParticlesView particles,
+    template <class ContainerView, class Functor, class... Args>
+    __global__ void apply_simple_functor_inplace(ContainerView particles,
                                                  Functor functor,
                                                  Args... args) {
       auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -28,8 +28,8 @@ namespace saga::core::cuda {
       functor(particles[gtid], forces[gtid], args...);
   }
 
-  template <class ParticlesView, class Functor, class... Args>
-  void apply_simple_functor_inplace(ParticlesView particles,
+  template <class ContainerView, class Functor, class... Args>
+  void apply_simple_functor_inplace(ContainerView particles,
                                     Functor const &functor, Args &&...args) {
 
     auto N = particles.size();
@@ -49,6 +49,14 @@ namespace saga::core::cuda {
           " threads per block. Reason: " +
           std::string{cudaGetErrorString(code)});
   }
+
+  /// Set the values of a vector
+  struct set_vector_value {
+    template <class T>
+    __saga_core_function__ void operator()(T &v, T def) const {
+      v = def;
+    }
+  };
 
   /// Set forces to zero
   template <class ForcesView>

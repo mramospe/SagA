@@ -1,5 +1,9 @@
 #pragma once
 #include "saga/core/backend.hpp"
+#include "saga/core/views.hpp"
+#if SAGA_CUDA_ENABLED
+#include "saga/core/cuda/loops.hpp"
+#endif
 #include <stdexcept>
 #include <string>
 #include <type_traits>

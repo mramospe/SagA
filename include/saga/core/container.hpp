@@ -4,6 +4,7 @@
 #include "saga/core/proxy.hpp"
 #include "saga/core/tuple.hpp"
 #include "saga/core/types.hpp"
+#include "saga/core/vector.hpp"
 #include "saga/core/views.hpp"
 
 #include <type_traits>
@@ -70,6 +71,25 @@ namespace saga {
 
 namespace saga::core {
 
+  /// Container for the given backend
+  template <class T, saga::backend Backend> struct container;
+
+  /// Container for the CPU backend
+  template <class T> struct container<T, saga::backend::CPU> {
+    using type = saga::vector<T, saga::backend::CPU>;
+  };
+
+#if SAGA_CUDA_ENABLED
+  /// Container for the CUDA backend
+  template <class T> struct container<T, saga::backend::CUDA> {
+    using type = saga::vector<T, saga::backend::CUDA>;
+  };
+#endif
+
+  /// Alias to get the type of a container for a given backend
+  template <class T, backend Backend>
+  using container_t = typename container<T, Backend>::type;
+
   /*!\brief Standard container for objects with fields
 
    */
@@ -79,8 +99,10 @@ namespace saga::core {
             saga::core::underlying_value_type_t<Field<TypeDescriptor>>,
             TypeDescriptor::backend>...> {
 
-    template<class Container, template <class> class ... F>
-      friend auto saga::core::detail::make_vector_views_impl(Container&, saga::properties<F...>);
+    template <class Container, template <class> class... F>
+    friend auto
+    saga::core::detail::make_vector_views_impl(Container &,
+                                               saga::properties<F...>);
 
 #if SAGA_CUDA_ENABLED
     template <saga::backend> friend class saga::core::detail::to_backend_t;
@@ -269,7 +291,7 @@ namespace saga::core {
 
     /// Get the container associated to the given field
     template <template <class> class F>
-    __saga_core_function__ auto& get_non_const() {
+    __saga_core_function__ auto &get_non_const() {
       return saga::core::get<saga::core::template_index_v<F, Field...>>(*this);
     }
   };
