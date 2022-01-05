@@ -94,7 +94,7 @@ namespace saga::physics::collision {
 
       auto size = particles.size();
 
-      saga::vector<bool, TypeDescriptor::backend> invalid(size);
+      saga::core::vector<bool, TypeDescriptor::backend> invalid(size);
       saga::core::set_vector_values<TypeDescriptor::backend>::evaluate(invalid,
                                                                        false);
 
@@ -202,7 +202,7 @@ namespace saga::physics::collision {
 
       auto size = particles.size();
 
-      saga::vector<merged_status, TypeDescriptor::backend> invalid(size);
+      saga::core::vector<merged_status, TypeDescriptor::backend> invalid(size);
       saga::core::set_vector_values<TypeDescriptor::backend>::evaluate(invalid,
                                                                        false);
 

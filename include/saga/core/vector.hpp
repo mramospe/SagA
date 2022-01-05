@@ -10,52 +10,49 @@
 
 #define SAGA_SIZE_IN_MEGABYTES 1048576
 
-namespace saga {
+namespace saga::core {
 
-  namespace core {
+  namespace detail {
 
-    namespace detail {
+    /// Helper class to avoid errors with nvcc and constexpr functions
+    template <class T, saga::backend Backend> struct allocator_t;
 
-      /// Helper class to avoid errors with nvcc and constexpr functions
-      template <class T, saga::backend Backend> struct allocator_t;
+    template <class T> struct allocator_t<T, saga::backend::CPU> {
 
-      template <class T> struct allocator_t<T, saga::backend::CPU> {
+      using value_type = T;
+      using pointer_type = value_type *;
+      using size_type = std::size_t;
 
-        using value_type = T;
-        using pointer_type = value_type *;
-        using size_type = std::size_t;
+      __saga_core_function__ pointer_type operator()(size_type n) const {
+        return n > 0 ? new value_type[n] : nullptr;
+      }
+    };
 
-        __saga_core_function__ pointer_type operator()(size_type n) const {
-          return n > 0 ? new value_type[n] : nullptr;
-        }
-      };
+    template <class T> struct allocator_t<T, saga::backend::CUDA> {
 
-      template <class T> struct allocator_t<T, saga::backend::CUDA> {
+      using value_type = T;
+      using pointer_type = value_type *;
+      using size_type = std::size_t;
 
-        using value_type = T;
-        using pointer_type = value_type *;
-        using size_type = std::size_t;
-
-        __saga_core_function__ pointer_type
-        operator()([[maybe_unused]] size_type n) const {
+      __saga_core_function__ pointer_type
+      operator()([[maybe_unused]] size_type n) const {
 #if SAGA_CUDA_ENABLED
-          pointer_type ptr;
+        pointer_type ptr;
 
-          cudaMalloc(&ptr, n * sizeof(value_type));
+        cudaMalloc(&ptr, n * sizeof(value_type));
 
-          return ptr;
+        return ptr;
 #else
-          SAGA_THROW_CUDA_ERROR;
+        SAGA_THROW_CUDA_ERROR;
 #endif
-        }
-      };
-    } // namespace detail
+      }
+    };
+  } // namespace detail
 
-    template <class T, saga::backend Backend>
-    __saga_core_function__ constexpr auto allocate(std::size_t n) {
-      return detail::allocator_t<T, Backend>{}(n);
-    }
-  } // namespace core
+  template <class T, saga::backend Backend>
+  __saga_core_function__ constexpr auto allocate(std::size_t n) {
+    return detail::allocator_t<T, Backend>{}(n);
+  }
 
   template <class T, saga::backend Backend> class vector {
 
@@ -228,4 +225,4 @@ namespace saga {
     return out;
   }
 #endif
-} // namespace saga
+} // namespace saga::core

@@ -30,7 +30,7 @@ namespace saga {
         typename Container::template type_with_backend<saga::backend::CPU> out;
 
         (out.template set<Field>(
-             saga::to_host(container.template get<Field>())),
+             saga::core::to_host(container.template get<Field>())),
          ...);
 
         return out;
@@ -51,7 +51,7 @@ namespace saga {
         typename Container::template type_with_backend<saga::backend::CUDA> out;
 
         (out.template set<Field>(
-             saga::to_device(container.template get<Field>())),
+             saga::core::to_device(container.template get<Field>())),
          ...);
 
         return out;
@@ -76,13 +76,13 @@ namespace saga::core {
 
   /// Container for the CPU backend
   template <class T> struct container<T, saga::backend::CPU> {
-    using type = saga::vector<T, saga::backend::CPU>;
+    using type = saga::core::vector<T, saga::backend::CPU>;
   };
 
 #if SAGA_CUDA_ENABLED
   /// Container for the CUDA backend
   template <class T> struct container<T, saga::backend::CUDA> {
-    using type = saga::vector<T, saga::backend::CUDA>;
+    using type = saga::core::vector<T, saga::backend::CUDA>;
   };
 #endif
 

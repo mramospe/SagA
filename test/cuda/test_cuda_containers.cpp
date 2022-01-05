@@ -59,7 +59,7 @@ saga::test::errors test_vector_iteration() {
 
   saga::test::errors errors;
 
-  using vector_type = saga::vector<float, saga::backend::CUDA>;
+  using vector_type = saga::core::vector<float, saga::backend::CUDA>;
 
   vector_type vector(10);
 
@@ -75,7 +75,7 @@ saga::test::errors test_vector_iteration() {
   }
 
   try {
-    auto cpu_vector = saga::to_host(vector);
+    auto cpu_vector = saga::core::to_host(vector);
 
     for (auto i = 0u; i < cpu_vector.size(); ++i) {
       if (!saga::test::is_close(cpu_vector[i], SAGA_TEST_DEFAULT_FLOAT_VALUE)) {
