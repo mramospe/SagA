@@ -4,7 +4,7 @@
 #include "saga/core/cuda/all.hpp"
 #endif
 #include "saga/core/container.hpp"
-#include "saga/core/iterators.hpp"
+#include "saga/core/iterator.hpp"
 #include "saga/core/keywords.hpp"
 #include "saga/core/properties.hpp"
 #include "saga/core/proxy.hpp"

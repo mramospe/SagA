@@ -10,92 +10,83 @@
 /// Elastic and inelastic collisions of particles
 namespace saga::physics::collision {
 
-  /*!\brief Helper class to evaluate the time a collision happens
+  namespace detail {
+    /*!\brief Helper class to evaluate the time a collision happens
 
       This is done by solving a second order polynomial. Numbers are computed
-     efficiently to avoid doing unnecessary calculations. An imaginary value of
-     the square root argument means that there was no collision in time. If the
-     roots are positive, this means the collision is ahead in time so no action
-     must be taken.
-   */
-  template <class TypeDescriptor> class collision_time_evaluator {
-
-  public:
-    using float_type = typename TypeDescriptor::float_type;
-
-    /// Build the class and compute intermediate quantities
+      efficiently to avoid doing unnecessary calculations. An imaginary value of
+      the square root argument means that there was no collision in time. If the
+      roots are positive, this means the collision is ahead in time so no action
+      must be taken.
+    */
     template <class Proxy>
-    __saga_core_function__ collision_time_evaluator(Proxy const &src,
-                                                    Proxy const &tgt) {
+    __saga_core_function__ typename Proxy::type_descriptor::float_type
+    evaluate_collision_time(Proxy const &src, Proxy const &tgt) {
+
+      using type_descriptor = typename Proxy::type_descriptor;
 
       static_assert(std::is_same_v<typename Proxy::shape_type,
-                                   saga::physics::sphere<TypeDescriptor>>);
+                                   saga::physics::sphere<type_descriptor>>);
 
-      float_type dx = tgt.get_x() - src.get_x();
-      float_type dy = tgt.get_y() - src.get_y();
-      float_type dz = tgt.get_z() - src.get_z();
+      auto dx = tgt.get_x() - src.get_x();
+      auto dy = tgt.get_y() - src.get_y();
+      auto dz = tgt.get_z() - src.get_z();
 
-      float_type dpx = tgt.get_px() - src.get_px();
-      float_type dpy = tgt.get_py() - src.get_py();
-      float_type dpz = tgt.get_pz() - src.get_pz();
+      auto dpx = tgt.get_px() - src.get_px();
+      auto dpy = tgt.get_py() - src.get_py();
+      auto dpz = tgt.get_pz() - src.get_pz();
 
-      float_type R = src.template get<saga::physics::radius>() +
-                     tgt.template get<saga::physics::radius>();
+      auto R = src.template get<saga::physics::radius>() +
+               tgt.template get<saga::physics::radius>();
 
-      float_type d2 = dx * dx + dy * dy + dz * dz;
+      auto d2 = dx * dx + dy * dy + dz * dz;
 
-      float_type a = dpx * dpx + dpy * dpy + dpz * dpz;
-      float_type b = 2 * (dx * dpx + dy * dpy + dz * dpz);
-      float_type c = d2 - R * R;
+      auto a = dpx * dpx + dpy * dpy + dpz * dpz;
+      auto b = 2 * (dx * dpx + dy * dpy + dz * dpz);
+      auto c = d2 - R * R;
 
-      float_type sqrt_arg = b * b - 4 * a * c;
+      auto sqrt_arg = b * b - 4 * a * c;
 
       // cases where particles are at rest
-      if (std::abs(a) <= saga::numeric_info<TypeDescriptor>::min) {
-        m_dt = saga::numeric_info<TypeDescriptor>::max;
+      if (std::abs(a) <= saga::numeric_info<type_descriptor>::min) {
+        return saga::numeric_info<type_descriptor>::max;
       } else {
 
         if (sqrt_arg < 0)
-          m_dt = saga::numeric_info<TypeDescriptor>::max;
-        else if (sqrt_arg <= saga::numeric_info<TypeDescriptor>::min)
-          m_dt = -0.5 * b / a;
+          return saga::numeric_info<type_descriptor>::max;
+        else if (sqrt_arg <= saga::numeric_info<type_descriptor>::min)
+          return -0.5 * b / a;
         else {
 
-          float_type t1 = 0.5 * (-b + std::sqrt(sqrt_arg)) / a;
-          float_type t2 = 0.5 * (-b - std::sqrt(sqrt_arg)) / a;
+          auto t1 = 0.5 * (-b + std::sqrt(sqrt_arg)) / a;
+          auto t2 = 0.5 * (-b - std::sqrt(sqrt_arg)) / a;
 
-          m_dt = t1 < t2 ? t1 : t2;
+          return t1 < t2 ? t1 : t2;
         }
       }
     }
 
     /// Whether there was a collision given the linear trayectories of the
     /// particles
-    __saga_core_function__ bool has_collision() const { return (m_dt < 0); }
-
-    /// Calculate the delta-time of a collision
-    __saga_core_function__ float_type dt() const { return m_dt; }
-
-  protected:
-    /// Delta-time to the collision
-    float_type m_dt;
-  };
+    template <class FloatType>
+    __saga_core_function__ bool is_valid_collision(FloatType dt,
+                                                   FloatType delta_t) {
+      return dt < 0 && dt > -delta_t;
+    }
+  } // namespace detail
 
   /*!\brief Elastic collisions of particles
    */
-  template <class TypeDescriptor> struct elastic {
-
-    using float_type = typename TypeDescriptor::float_type;
+  template <saga::backend Backend> struct elastic {
 
     /// Evaluate the collisions among particles inplace
-    template <class Particles>
-    void operator()(Particles &particles, float_type delta_t) const {
+    template <class Particles, class FloatType>
+    void operator()(Particles &particles, FloatType delta_t) const {
 
       auto size = particles.size();
 
-      saga::core::vector<bool, TypeDescriptor::backend> invalid(size);
-      saga::physics::set_vector_values<TypeDescriptor::backend>::evaluate(
-          invalid, false);
+      saga::core::vector<bool, Backend> invalid(size);
+      saga::physics::set_vector_values<Backend>::evaluate(invalid, false);
 
       for (auto i = 0u; i < size; ++i) {
 
@@ -119,42 +110,43 @@ namespace saga::physics::collision {
     }
 
     /// Evaluate the collisions between two particles
-    template <class Proxy>
-    std::enable_if_t<std::is_same_v<typename Proxy::shape_type,
-                                    saga::physics::sphere<TypeDescriptor>>,
-                     bool>
-    operator()(Proxy &src, Proxy &tgt, float_type delta_t) const {
+    template <class Proxy, class FloatType>
+    std::enable_if_t<
+        std::is_same_v<typename Proxy::shape_type,
+                       saga::physics::sphere<typename Proxy::type_descriptor>>,
+        bool>
+    operator()(Proxy &src, Proxy &tgt, FloatType delta_t) const {
 
-      collision_time_evaluator<TypeDescriptor> const dce(src, tgt);
+      auto time_to_collision = detail::evaluate_collision_time(src, tgt);
 
       // only real numbers represent collisions
-      if (dce.has_collision() && dce.dt() > -delta_t) {
+      if (detail::is_valid_collision(time_to_collision, delta_t)) {
 
         // positions of the collision
-        src.set_x(src.get_x() + src.get_px() * dce.dt());
-        src.set_y(src.get_y() + src.get_py() * dce.dt());
-        src.set_z(src.get_z() + src.get_pz() * dce.dt());
+        src.set_x(src.get_x() + src.get_px() * time_to_collision);
+        src.set_y(src.get_y() + src.get_py() * time_to_collision);
+        src.set_z(src.get_z() + src.get_pz() * time_to_collision);
 
-        tgt.set_x(tgt.get_x() + tgt.get_px() * dce.dt());
-        tgt.set_y(tgt.get_y() + tgt.get_py() * dce.dt());
-        tgt.set_z(tgt.get_z() + tgt.get_pz() * dce.dt());
+        tgt.set_x(tgt.get_x() + tgt.get_px() * time_to_collision);
+        tgt.set_y(tgt.get_y() + tgt.get_py() * time_to_collision);
+        tgt.set_z(tgt.get_z() + tgt.get_pz() * time_to_collision);
 
         // we must recalculate the distances, this time at the collision point
-        float_type dx_p = tgt.get_x() - src.get_x();
-        float_type dy_p = tgt.get_y() - src.get_y();
-        float_type dz_p = tgt.get_z() - src.get_z();
+        auto dx_p = tgt.get_x() - src.get_x();
+        auto dy_p = tgt.get_y() - src.get_y();
+        auto dz_p = tgt.get_z() - src.get_z();
 
-        float_type dpx_p = tgt.get_px() - src.get_px();
-        float_type dpy_p = tgt.get_py() - src.get_py();
-        float_type dpz_p = tgt.get_pz() - src.get_pz();
+        auto dpx_p = tgt.get_px() - src.get_px();
+        auto dpy_p = tgt.get_py() - src.get_py();
+        auto dpz_p = tgt.get_pz() - src.get_pz();
 
-        float_type mt = 2.f * (dx_p * dpx_p + dy_p * dpy_p + dz_p * dpz_p) /
-                        ((dx_p * dx_p + dy_p * dy_p + dz_p * dz_p) *
-                         (src.get_mass() + tgt.get_mass()));
+        auto mt = 2.f * (dx_p * dpx_p + dy_p * dpy_p + dz_p * dpz_p) /
+                  ((dx_p * dx_p + dy_p * dy_p + dz_p * dz_p) *
+                   (src.get_mass() + tgt.get_mass()));
 
-        float_type base_x = mt * dx_p;
-        float_type base_y = mt * dy_p;
-        float_type base_z = mt * dz_p;
+        auto base_x = mt * dx_p;
+        auto base_y = mt * dy_p;
+        auto base_z = mt * dz_p;
 
         // momenta
         auto src_mass = src.get_mass();
@@ -168,8 +160,9 @@ namespace saga::physics::collision {
                                  tgt.get_pz() + base_z * src_mass, tgt_mass);
 
         // integrate the positions for the time lapse since the collision
-        auto integrate_position = [&delta_t, &dce](auto &p) -> void {
-          auto t = delta_t + dce.dt(); // dt is negative
+        auto integrate_position = [&delta_t,
+                                   &time_to_collision](auto &p) -> void {
+          auto t = delta_t + time_to_collision; // time_to_collision is negative
           p.set_x(p.get_x() + p.get_px() / p.get_mass() * t);
           p.set_y(p.get_y() + p.get_py() / p.get_mass() * t);
           p.set_z(p.get_z() + p.get_pz() / p.get_mass() * t);
@@ -187,23 +180,20 @@ namespace saga::physics::collision {
 
   /*!\brief Collision type where two balls merge into one when are too close
    */
-  template <class TypeDescriptor> struct simple_merge {
-
-    using float_type = typename TypeDescriptor::float_type;
+  template <saga::backend Backend> struct simple_merge {
 
     using merged_status = bool;
     static constexpr merged_status merged_status_true = true;
     static constexpr merged_status merged_status_false = false;
 
     /// Evaluate the collisions among particles inplace
-    template <class Particles>
-    void operator()(Particles &particles, float_type delta_t) const {
+    template <class Particles, class FloatType>
+    void operator()(Particles &particles, FloatType delta_t) const {
 
       auto size = particles.size();
 
-      saga::core::vector<merged_status, TypeDescriptor::backend> invalid(size);
-      saga::physics::set_vector_values<TypeDescriptor::backend>::evaluate(
-          invalid, false);
+      saga::core::vector<merged_status, Backend> invalid(size);
+      saga::physics::set_vector_values<Backend>::evaluate(invalid, false);
 
       for (auto i = 0u; i < size; ++i) {
 
@@ -244,37 +234,38 @@ namespace saga::physics::collision {
     }
 
     /// Evaluate the collisions among two particles
-    template <class Proxy>
-    void operator()(Proxy &src, Proxy &tgt, float_type delta_t) const {
+    template <class Proxy, class FloatType>
+    void operator()(Proxy &src, Proxy &tgt, FloatType delta_t) const {
       merge_if_close_and_return_status(src, tgt, delta_t);
     }
 
   private:
     /// Merge two particles if they are close enough, and return the
     /// corresponding status code
-    template <class Proxy>
-    std::enable_if_t<std::is_same_v<typename Proxy::shape_type,
-                                    saga::physics::sphere<TypeDescriptor>>,
-                     merged_status>
+    template <class Proxy, class FloatType>
+    std::enable_if_t<
+        std::is_same_v<typename Proxy::shape_type,
+                       saga::physics::sphere<typename Proxy::type_descriptor>>,
+        merged_status>
     merge_if_close_and_return_status(Proxy &src, Proxy &tgt,
-                                     float_type delta_t) const {
+                                     FloatType delta_t) const {
 
-      collision_time_evaluator<TypeDescriptor> const dce(src, tgt);
+      auto time_to_collision = detail::evaluate_collision_time(src, tgt);
 
       // only real numbers represent collisions
-      if (dce.has_collision() && dce.dt() > -delta_t) {
+      if (detail::is_valid_collision(time_to_collision, delta_t)) {
 
         auto radius_from_mass = [](auto const &p1_radius, auto const &p1_mass,
                                    auto const &p2_mass) {
-          return std::pow(float_type{1.f} + p2_mass / p1_mass,
-                          float_type{1.f} / float_type{3.f}) *
+          return std::pow(FloatType{1.f} + p2_mass / p1_mass,
+                          FloatType{1.f} / FloatType{3.f}) *
                  p1_radius;
         };
 
         auto src_mass = src.get_mass();
         auto tgt_mass = tgt.get_mass();
 
-        float_type R =
+        auto R =
             src_mass > tgt_mass
                 ? radius_from_mass(src.template get<saga::physics::radius>(),
                                    src_mass, tgt_mass)
@@ -299,7 +290,7 @@ namespace saga::physics::collision {
         src.template set<saga::physics::radius>(R);
 
         // integrate the positions for the time lapse since the collision
-        auto dt = -dce.dt(); // dt is negative
+        auto dt = -time_to_collision; // time_to_collision is negative
         src.set_x(src.get_x() + src.get_px() / src.get_mass() * dt);
         src.set_y(src.get_y() + src.get_py() / src.get_mass() * dt);
         src.set_z(src.get_z() + src.get_pz() / src.get_mass() * dt);
