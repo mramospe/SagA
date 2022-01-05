@@ -32,21 +32,18 @@ namespace saga::core::cuda {
   void apply_simple_functor_inplace(ContainerView particles,
                                     Functor const &functor, Args &&...args) {
 
-    auto N = particles.size();
-    auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
-                   (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
+    auto [blocks, threads_per_block] =
+        saga::core::cuda::optimal_grid_1d(particles);
 
-    detail::apply_simple_functor_inplace<<<nblocks,
-                                           SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
+    detail::apply_simple_functor_inplace<<<blocks, threads_per_block>>>(
         particles, functor, args...);
 
     auto code = cudaPeekAtLastError();
     if (code != cudaSuccess)
       throw std::runtime_error(
-          "Failed to evaluate functor on " + std::to_string(N) +
-          " objects, with " + std::to_string(nblocks) + " block(s) and " +
-          std::to_string(SAGA_CUDA_MAX_THREADS_PER_BLOCK_X) +
-          " threads per block. Reason: " +
+          "Failed to evaluate functor on " + std::to_string(particles.size()) +
+          " objects, with " + std::to_string(blocks) + " block(s) and " +
+          std::to_string(threads_per_block) + " threads per block. Reason: " +
           std::string{cudaGetErrorString(code)});
   }
 

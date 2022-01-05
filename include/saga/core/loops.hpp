@@ -147,15 +147,14 @@ namespace saga::core {
     static void set_to_zero([[maybe_unused]] Forces &forces) {
 
 #if SAGA_CUDA_ENABLED
-      auto N = forces.size();
-      auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
-                     (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
+
+      auto [blocks, threads_per_block] =
+          saga::core::cuda::optimal_grid_1d(forces);
 
       auto forces_view = saga::core::make_container_view(forces);
 
-      saga::core::cuda::
-          set_forces_to_zero<<<nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
-              forces_view);
+      saga::core::cuda::set_forces_to_zero<<<blocks, threads_per_block>>>(
+          forces_view);
 
       auto code = cudaPeekAtLastError();
       if (code != cudaSuccess)
@@ -175,19 +174,17 @@ namespace saga::core {
 
 #if SAGA_CUDA_ENABLED
 
-      auto N = particles.size();
-      auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
-                     (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
+      auto [blocks, threads_per_block] =
+          saga::core::cuda::optimal_grid_1d(particles);
 
       auto particles_view = saga::core::make_container_view(particles);
       auto forces_view = saga::core::make_container_view(forces);
 
-      auto smem = SAGA_CUDA_MAX_THREADS_PER_BLOCK_X *
+      auto smem = threads_per_block *
                   sizeof(typename decltype(particles_view)::value_type);
 
-      saga::core::cuda::
-          add_forces<<<nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X, smem>>>(
-              forces_view, force_function, particles_view);
+      saga::core::cuda::add_forces<<<blocks, threads_per_block, smem>>>(
+          forces_view, force_function, particles_view);
 
       auto code = cudaPeekAtLastError();
       if (code != cudaSuccess)
@@ -224,17 +221,17 @@ namespace saga::core {
                          [[maybe_unused]] FloatType delta_t) {
 
 #if SAGA_CUDA_ENABLED
-      auto N = particles.size();
-      auto nblocks = N / SAGA_CUDA_MAX_THREADS_PER_BLOCK_X +
-                     (N % SAGA_CUDA_MAX_THREADS_PER_BLOCK_X != 0);
+
+      auto [blocks, threads_per_block] =
+          saga::core::cuda::optimal_grid_1d(particles);
 
       auto particles_view = saga::core::make_container_view(particles);
       auto forces_view = saga::core::make_container_view(forces);
 
-      saga::core::cuda::apply_contiguous_functor_inplace<<<
-          nblocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X>>>(
-          particles_view, forces_view,
-          detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
+      saga::core::cuda::
+          apply_contiguous_functor_inplace<<<blocks, threads_per_block>>>(
+              particles_view, forces_view,
+              detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
 
       auto code = cudaPeekAtLastError();
       if (code != cudaSuccess)
