@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdlib>
+#include <type_traits>
 
 namespace saga::core {
 

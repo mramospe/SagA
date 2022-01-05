@@ -1,6 +1,10 @@
 #pragma once
 #include "saga/core/backend.hpp"
+#if SAGA_CUDA_ENABLED
+#include "saga/core/cuda/all.hpp"
+#endif
 #include "saga/core/container.hpp"
+#include "saga/core/iterators.hpp"
 #include "saga/core/keywords.hpp"
 #include "saga/core/properties.hpp"
 #include "saga/core/proxy.hpp"
