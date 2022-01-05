@@ -1,7 +1,6 @@
 #pragma once
 #include "saga/core/backend.hpp"
 #include "saga/core/loops.hpp"
-#include "saga/core/types.hpp"
 #include "saga/core/vector.hpp"
 #include "saga/physics/shape.hpp"
 #include <algorithm>
