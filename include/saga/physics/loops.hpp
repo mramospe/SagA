@@ -6,7 +6,7 @@
 #include "saga/core/cuda/loops.hpp"
 #endif
 
-namespace saga::core {
+namespace saga::physics {
 
   namespace detail {
 
@@ -243,4 +243,4 @@ namespace saga::core {
 #endif
     }
   };
-} // namespace saga::core
+} // namespace saga::physics

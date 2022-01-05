@@ -1,7 +1,7 @@
 #pragma once
 #include "saga/core/backend.hpp"
-#include "saga/core/loops.hpp"
 #include "saga/core/vector.hpp"
+#include "saga/physics/loops.hpp"
 #include "saga/physics/shape.hpp"
 #include <algorithm>
 #include <stdexcept>
@@ -94,8 +94,8 @@ namespace saga::physics::collision {
       auto size = particles.size();
 
       saga::core::vector<bool, TypeDescriptor::backend> invalid(size);
-      saga::core::set_vector_values<TypeDescriptor::backend>::evaluate(invalid,
-                                                                       false);
+      saga::physics::set_vector_values<TypeDescriptor::backend>::evaluate(
+          invalid, false);
 
       for (auto i = 0u; i < size; ++i) {
 
@@ -202,8 +202,8 @@ namespace saga::physics::collision {
       auto size = particles.size();
 
       saga::core::vector<merged_status, TypeDescriptor::backend> invalid(size);
-      saga::core::set_vector_values<TypeDescriptor::backend>::evaluate(invalid,
-                                                                       false);
+      saga::physics::set_vector_values<TypeDescriptor::backend>::evaluate(
+          invalid, false);
 
       for (auto i = 0u; i < size; ++i) {
 

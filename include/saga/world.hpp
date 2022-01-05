@@ -1,13 +1,9 @@
 #pragma once
-#include "saga/core/loops.hpp"
 #include "saga/particle.hpp"
 #include "saga/physics/core.hpp"
 #include "saga/physics/force.hpp"
+#include "saga/physics/loops.hpp"
 #include "saga/physics/shape.hpp"
-
-#if SAGA_CUDA_ENABLED
-#include "saga/core/cuda/loops.hpp"
-#endif
 
 #include <functional>
 #include <variant>
@@ -127,11 +123,11 @@ namespace saga {
         forces.resize(m_particles.size());
 
         // set all forces to zero
-        saga::core::iterate_forces<type_descriptor::backend>::set_to_zero(
+        saga::physics::iterate_forces<type_descriptor::backend>::set_to_zero(
             forces);
 
         // first estimation of the positions
-        saga::core::integrate_position<type_descriptor::backend>::evaluate(
+        saga::physics::integrate_position<type_descriptor::backend>::evaluate(
             m_particles, delta_t);
 
         // check if with the final step we have collisions and handle them
@@ -142,13 +138,13 @@ namespace saga {
         for (auto inter : m_interactions)
           std::visit(
               [this, &forces](auto const &arg) -> void {
-                saga::core::iterate_forces<type_descriptor::backend>::
+                saga::physics::iterate_forces<type_descriptor::backend>::
                     fill_from_interaction(forces, arg, m_particles);
               },
               inter);
 
         // integrate the momenta
-        saga::core::integrate_momenta_and_position<
+        saga::physics::integrate_momenta_and_position<
             type_descriptor::backend>::evaluate(m_particles, forces, delta_t);
 
         // call-back functions

@@ -6,6 +6,7 @@
 #include "saga/physics/force.hpp"
 #include "saga/physics/gravity.hpp"
 #include "saga/physics/interaction.hpp"
+#include "saga/physics/loops.hpp"
 #include "saga/physics/quantities.hpp"
 #include "saga/physics/shape.hpp"
 
