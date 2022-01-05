@@ -10,10 +10,6 @@
 
 #define SAGA_SIZE_IN_MEGABYTES 1048576
 
-#define SAGA_THROW_CUDA_ERROR                                                  \
-  throw std::runtime_error("Attempt to run with CUDA backend on software "     \
-                           "compiled exclusively for CPU")
-
 namespace saga {
 
   namespace core {

@@ -67,7 +67,7 @@ saga::test::errors test_vector_iteration() {
 
     auto vector_view = saga::core::make_vector_view(vector);
 
-    saga::core::cuda::apply_simple_functor_inplace(vector_view, set_value{});
+    saga::core::apply_functor(vector_view, set_value{});
 
   } catch (std::runtime_error const &e) {
     errors.push_back(e.what());
@@ -104,8 +104,7 @@ saga::test::errors test_container_iteration() {
 
     auto particles_view = saga::core::make_container_view(particles);
 
-    saga::core::cuda::apply_simple_functor_inplace(particles_view,
-                                                   set_particle{});
+    saga::core::apply_functor(particles_view, set_particle{});
 
   } catch (std::runtime_error const &e) {
     errors.push_back(e.what());

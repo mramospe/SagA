@@ -47,6 +47,19 @@ namespace saga::core {
     };
   } // namespace detail
 
+#if SAGA_CUDA_ENABLED
+  template <class View, class Functor, class... Args>
+  void apply_functor(View obj, Functor const &functor, Args &&...args) {
+
+    auto [blocks, threads_per_block] = saga::core::cuda::optimal_grid_1d(obj);
+
+    saga::core::cuda::apply_functor<<<blocks, threads_per_block>>>(obj, functor,
+                                                                   args...);
+
+    SAGA_CHECK_LAS_ERROR("Failed to evaluate functor");
+  }
+#endif
+
   template <backend Backend> struct set_vector_values;
 
   template <> struct set_vector_values<backend::CPU> {
@@ -61,9 +74,13 @@ namespace saga::core {
     template <class Vector>
     static void evaluate(Vector &v, typename Vector::value_type def) {
 #if SAGA_CUDA_ENABLED
-      saga::core::cuda::apply_simple_functor_inplace(
-          saga::core::make_vector_view(v), saga::core::cuda::set_vector_value{},
-          def);
+
+      auto [blocks, threads_per_block] = saga::core::cuda::optimal_grid_1d(v);
+
+      saga::core::cuda::set_view_values<<<blocks, threads_per_block>>>(
+          saga::core::make_vector_view(v), def);
+
+      SAGA_CHECK_LAS_ERROR("Failed to set vector values");
 #else
       SAGA_THROW_CUDA_ERROR;
 #endif
@@ -86,14 +103,10 @@ namespace saga::core {
     static void evaluate([[maybe_unused]] Particles &particles,
                          [[maybe_unused]] FloatType delta_t) {
 #if SAGA_CUDA_ENABLED
-
-      auto particles_view = saga::core::make_container_view(particles);
-
-      saga::core::cuda::apply_simple_functor_inplace(
-          particles_view, detail::integrate_position_kernel_fctr{}, delta_t);
+      apply_functor(saga::core::make_container_view(particles),
+                    detail::integrate_position_kernel_fctr{}, delta_t);
 #else
-      throw std::runtime_error("Attempt to call a method for the CUDA backend "
-                               "when it is not enabled");
+      SAGA_THROW_CUDA_ERROR;
 #endif
     }
   };
@@ -153,16 +166,13 @@ namespace saga::core {
 
       auto forces_view = saga::core::make_container_view(forces);
 
-      saga::core::cuda::set_forces_to_zero<<<blocks, threads_per_block>>>(
-          forces_view);
+      saga::core::cuda::set_view_values<<<blocks, threads_per_block>>>(
+          forces_view,
+          typename decltype(forces_view)::value_type{0.f, 0.f, 0.f});
 
-      auto code = cudaPeekAtLastError();
-      if (code != cudaSuccess)
-        throw std::runtime_error("Failed to set forces to zero. Reason: " +
-                                 std::string{cudaGetErrorString(code)});
+      SAGA_CHECK_LAS_ERROR("Failed to set forces to zero");
 #else
-      throw std::runtime_error("Attempt to call a method for the CUDA backend "
-                               "when it is not enabled");
+      SAGA_THROW_CUDA_ERROR;
 #endif
     }
 
@@ -183,16 +193,12 @@ namespace saga::core {
       auto smem = threads_per_block *
                   sizeof(typename decltype(particles_view)::value_type);
 
-      saga::core::cuda::add_forces<<<blocks, threads_per_block, smem>>>(
+      saga::core::cuda::calculate_forces<<<blocks, threads_per_block, smem>>>(
           forces_view, force_function, particles_view);
 
-      auto code = cudaPeekAtLastError();
-      if (code != cudaSuccess)
-        throw std::runtime_error("Failed to determine accelerations. Reason: " +
-                                 std::string{cudaGetErrorString(code)});
+      SAGA_CHECK_LAS_ERROR("Failed to determine accelerations");
 #else
-      throw std::runtime_error("Attempt to call a method for the CUDA backend "
-                               "when it is not enabled");
+      SAGA_THROW_CUDA_ERROR;
 #endif
     }
   };
@@ -225,22 +231,15 @@ namespace saga::core {
       auto [blocks, threads_per_block] =
           saga::core::cuda::optimal_grid_1d(particles);
 
-      auto particles_view = saga::core::make_container_view(particles);
-      auto forces_view = saga::core::make_container_view(forces);
-
       saga::core::cuda::
-          apply_contiguous_functor_inplace<<<blocks, threads_per_block>>>(
-              particles_view, forces_view,
+          apply_functor_contiguous_views<<<blocks, threads_per_block>>>(
+              saga::core::make_container_view(particles),
+              saga::core::make_container_view(forces),
               detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
 
-      auto code = cudaPeekAtLastError();
-      if (code != cudaSuccess)
-        throw std::runtime_error(
-            "Unable to integrate momenta and position. Reason: " +
-            std::string{cudaGetErrorString(code)});
+      SAGA_CHECK_LAS_ERROR("Unable to integrate momenta and position");
 #else
-      throw std::runtime_error("Attempt to call a method for the CUDA backend "
-                               "when it is not enabled");
+      SAGA_THROW_CUDA_ERROR;
 #endif
     }
   };
