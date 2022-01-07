@@ -24,6 +24,77 @@ namespace saga::core::cuda {
       functor(first[gtid], second[gtid], args...);
   }
 
+  /// Apply a functor on the given views
+  template <class ParticlesView, class IsCloseFunctor, class Functor,
+            class... Args>
+  __global__ void apply_functor_skip_if_previous_evaluation_is_true(
+      ParticlesView particles, IsCloseFunctor is_close_functor, Functor functor,
+      Args... args) {
+
+    extern __shared__ char shared_memory[];
+
+    // CUDA does not allow to create arrays of template types yet
+    auto shared_particles = (typename ParticlesView::value_type *)shared_memory;
+
+    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    auto current_particle = gtid < particles.size()
+                                ? particles[gtid]
+                                : particles[0]; // default to the first particle
+
+    // the number of tiles is equal to the dimension of the block
+    auto ntiles =
+        particles.size() / blockDim.x + (particles.size() % blockDim.x != 0);
+
+    // while this is true we keep evaluating the functor
+    bool code = true;
+
+    // loop over the tiles
+    for (auto tile = 0u; tile < ntiles; ++tile) {
+
+      auto idx = tile * blockDim.x + threadIdx.x;
+
+      if (idx < particles.size())
+        shared_particles[threadIdx.x] = particles[idx];
+
+      // the shared memory has been filled
+      __syncthreads();
+
+      if (code && gtid < particles.size()) {
+        for (auto i = 0u; i < blockDim.x; ++i) {
+
+          auto cid = tile * blockDim.x + i;
+
+          if (cid == gtid)
+            continue; // the particle is the one that is being processed
+          else if (cid < particles.size()) {
+
+            auto [time_to_collision, is_valid] = is_close_functor(
+                current_particle, shared_particles[threadIdx.x], args...);
+
+            if (is_valid) {
+              // we will never process this particle again, since at least one
+              // particle has been found being close
+              code = false;
+
+              if (cid > gtid)
+                // call the functor only if we are processing particles with an
+                // index greater than the current
+                functor(current_particle, particles[cid], time_to_collision,
+                        args...);
+            }
+          } else
+            // the next particles will also fall into this statement, so simply
+            // stop looping over the array
+            break;
+        }
+      }
+
+      // the interactions have been computed
+      __syncthreads();
+    }
+  }
+
   /// Set the values of a vector
   struct set_vector_value {
     template <class T>

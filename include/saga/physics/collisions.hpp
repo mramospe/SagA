@@ -11,6 +11,12 @@
 namespace saga::physics::collision {
 
   namespace detail {
+
+    template <class FloatType> struct collision_information {
+      FloatType delta_t;
+      bool is_valid;
+    };
+
     /*!\brief Helper class to evaluate the time a collision happens
 
       This is done by solving a second order polynomial. Numbers are computed
@@ -19,108 +25,74 @@ namespace saga::physics::collision {
       roots are positive, this means the collision is ahead in time so no action
       must be taken.
     */
-    template <class Proxy>
-    __saga_core_function__ typename Proxy::type_descriptor::float_type
-    evaluate_collision_time(Proxy const &src, Proxy const &tgt) {
+    struct collision_time_evaluator {
 
-      using type_descriptor = typename Proxy::type_descriptor;
+      template <class U, class V>
+      __saga_core_function__
+          collision_information<typename U::type_descriptor::float_type>
+          operator()(U const src, V const tgt,
+                     typename U::type_descriptor::float_type delta_t) {
 
-      static_assert(std::is_same_v<typename Proxy::shape_type,
-                                   saga::physics::sphere<type_descriptor>>);
+        using type_descriptor = typename U::type_descriptor;
 
-      auto dx = tgt.get_x() - src.get_x();
-      auto dy = tgt.get_y() - src.get_y();
-      auto dz = tgt.get_z() - src.get_z();
+        static_assert(std::is_same_v<typename U::shape_type,
+                                     saga::physics::sphere<type_descriptor>>);
 
-      auto dpx = tgt.get_px() - src.get_px();
-      auto dpy = tgt.get_py() - src.get_py();
-      auto dpz = tgt.get_pz() - src.get_pz();
+        auto dx = tgt.get_x() - src.get_x();
+        auto dy = tgt.get_y() - src.get_y();
+        auto dz = tgt.get_z() - src.get_z();
 
-      auto R = src.template get<saga::physics::radius>() +
-               tgt.template get<saga::physics::radius>();
+        auto dpx = tgt.get_px() - src.get_px();
+        auto dpy = tgt.get_py() - src.get_py();
+        auto dpz = tgt.get_pz() - src.get_pz();
 
-      auto d2 = dx * dx + dy * dy + dz * dz;
+        auto R = src.template get<saga::physics::radius>() +
+                 tgt.template get<saga::physics::radius>();
 
-      auto a = dpx * dpx + dpy * dpy + dpz * dpz;
-      auto b = 2 * (dx * dpx + dy * dpy + dz * dpz);
-      auto c = d2 - R * R;
+        auto d2 = dx * dx + dy * dy + dz * dz;
 
-      auto sqrt_arg = b * b - 4 * a * c;
+        auto a = dpx * dpx + dpy * dpy + dpz * dpz;
+        auto b = 2 * (dx * dpx + dy * dpy + dz * dpz);
+        auto c = d2 - R * R;
 
-      // cases where particles are at rest
-      if (std::abs(a) <= saga::numeric_info<type_descriptor>::min) {
-        return saga::numeric_info<type_descriptor>::max;
-      } else {
+        auto sqrt_arg = b * b - 4 * a * c;
 
-        if (sqrt_arg < 0)
-          return saga::numeric_info<type_descriptor>::max;
-        else if (sqrt_arg <= saga::numeric_info<type_descriptor>::min)
-          return -0.5 * b / a;
-        else {
+        // cases where particles are at rest
+        typename U::type_descriptor::float_type dt;
+        if (std::abs(a) <= saga::numeric_info<type_descriptor>::min) {
+          dt = saga::numeric_info<type_descriptor>::max;
+        } else {
 
-          auto t1 = 0.5 * (-b + std::sqrt(sqrt_arg)) / a;
-          auto t2 = 0.5 * (-b - std::sqrt(sqrt_arg)) / a;
+          if (sqrt_arg < 0)
+            dt = saga::numeric_info<type_descriptor>::max;
+          else if (sqrt_arg <= saga::numeric_info<type_descriptor>::min)
+            dt = -0.5 * b / a;
+          else {
 
-          return t1 < t2 ? t1 : t2;
-        }
-      }
-    }
+            auto t1 = 0.5 * (-b + std::sqrt(sqrt_arg)) / a;
+            auto t2 = 0.5 * (-b - std::sqrt(sqrt_arg)) / a;
 
-    /// Whether there was a collision given the linear trayectories of the
-    /// particles
-    template <class FloatType>
-    __saga_core_function__ bool is_valid_collision(FloatType dt,
-                                                   FloatType delta_t) {
-      return dt < 0 && dt > -delta_t;
-    }
-  } // namespace detail
-
-  /*!\brief Elastic collisions of particles
-   */
-  template <saga::backend Backend> struct elastic {
-
-    /// Evaluate the collisions among particles inplace
-    template <class Particles, class FloatType>
-    void operator()(Particles &particles, FloatType delta_t) const {
-
-      auto size = particles.size();
-
-      saga::core::vector<bool, Backend> invalid(size);
-      saga::physics::set_vector_values<Backend>::evaluate(invalid, false);
-
-      for (auto i = 0u; i < size; ++i) {
-
-        auto pi = particles[i];
-
-        for (auto j = i + 1; j < size; ++j) {
-
-          if (invalid[j])
-            continue;
-
-          auto pj = particles[j];
-
-          if (this->operator()(pi, pj, delta_t)) {
-            // no need to set/check invalid[i] since we will never end-up
-            // processing that particle again
-            invalid[j] = true;
-            break;
+            dt = t1 < t2 ? t1 : t2;
           }
         }
+
+        return {dt, dt < 0 && dt > -delta_t};
       }
-    }
+    };
 
-    /// Evaluate the collisions between two particles
-    template <class Proxy, class FloatType>
-    std::enable_if_t<
-        std::is_same_v<typename Proxy::shape_type,
-                       saga::physics::sphere<typename Proxy::type_descriptor>>,
-        bool>
-    operator()(Proxy &src, Proxy &tgt, FloatType delta_t) const {
+    struct elastic_fctr {
+      /*!\brief Evaluate the collisions between two particles
 
-      auto time_to_collision = detail::evaluate_collision_time(src, tgt);
-
-      // only real numbers represent collisions
-      if (detail::is_valid_collision(time_to_collision, delta_t)) {
+        Note that *time_to_collision* must be negative and smaller than
+        *delta_t* in absolute value.
+      */
+      template <class U, class V, class FloatType>
+      __saga_core_function__ std::enable_if_t<
+          std::is_same_v<typename U::shape_type,
+                         saga::physics::sphere<typename U::type_descriptor>>,
+          void>
+      operator()(U src, V tgt, FloatType time_to_collision,
+                 FloatType delta_t) const {
 
         // positions of the collision
         src.set_x(src.get_x() + src.get_px() * time_to_collision);
@@ -171,90 +143,21 @@ namespace saga::physics::collision {
 
         integrate_position(src);
         integrate_position(tgt);
-
-        return true;
-      } else
-        return false;
-    }
-  };
-
-  /*!\brief Collision type where two balls merge into one when are too close
-   */
-  template <saga::backend Backend> struct simple_merge {
-
-    using merged_status = bool;
-    static constexpr merged_status merged_status_true = true;
-    static constexpr merged_status merged_status_false = false;
-
-    /// Evaluate the collisions among particles inplace
-    template <class Particles, class FloatType>
-    void operator()(Particles &particles, FloatType delta_t) const {
-
-      auto size = particles.size();
-
-      saga::core::vector<merged_status, Backend> invalid(size);
-      saga::physics::set_vector_values<Backend>::evaluate(invalid, false);
-
-      for (auto i = 0u; i < size; ++i) {
-
-        if (invalid[i])
-          continue;
-
-        auto pi = particles[i];
-
-        for (auto j = i + 1; j < size; ++j) {
-
-          if (invalid[j])
-            continue;
-
-          auto pj = particles[j];
-
-          // if delta_t is too big, we might miss situations where several
-          // particles collide at the same time
-          if ((invalid[j] =
-                   this->merge_if_close_and_return_status(pi, pj, delta_t)))
-            break;
-        }
       }
+    };
 
-      std::size_t read_counter = 0u;
-      std::size_t write_counter = 0u;
+    struct simple_merge_fctr {
 
-      while (read_counter < size) {
+      /// Merge two particles if they are close enough
+      template <class U, class V, class FloatType>
+      __saga_core_function__ std::enable_if_t<
+          std::is_same_v<typename U::shape_type,
+                         saga::physics::sphere<typename U::type_descriptor>>,
+          void>
+      operator()(U src, V tgt, FloatType time_to_collision,
+                 FloatType delta_t) const {
 
-        if (invalid[read_counter]) {
-          ++read_counter;
-          continue;
-        }
-
-        particles[write_counter++] = particles[read_counter++];
-      }
-
-      particles.resize(write_counter);
-    }
-
-    /// Evaluate the collisions among two particles
-    template <class Proxy, class FloatType>
-    void operator()(Proxy &src, Proxy &tgt, FloatType delta_t) const {
-      merge_if_close_and_return_status(src, tgt, delta_t);
-    }
-
-  private:
-    /// Merge two particles if they are close enough, and return the
-    /// corresponding status code
-    template <class Proxy, class FloatType>
-    std::enable_if_t<
-        std::is_same_v<typename Proxy::shape_type,
-                       saga::physics::sphere<typename Proxy::type_descriptor>>,
-        merged_status>
-    merge_if_close_and_return_status(Proxy &src, Proxy &tgt,
-                                     FloatType delta_t) const {
-
-      auto time_to_collision = detail::evaluate_collision_time(src, tgt);
-
-      // only real numbers represent collisions
-      if (detail::is_valid_collision(time_to_collision, delta_t)) {
-
+        // only real numbers represent collisions
         auto radius_from_mass = [](auto const &p1_radius, auto const &p1_mass,
                                    auto const &p2_mass) {
           return std::pow(FloatType{1.f} + p2_mass / p1_mass,
@@ -295,12 +198,178 @@ namespace saga::physics::collision {
         src.set_y(src.get_y() + src.get_py() / src.get_mass() * dt);
         src.set_z(src.get_z() + src.get_pz() / src.get_mass() * dt);
         src.set_t(src.get_t() + src.get_e() / src.get_mass() * dt);
-
-        // have merged
-        return merged_status_true;
       }
-      // have not merged
-      return merged_status_false;
+    };
+  } // namespace detail
+
+  /*!\brief Elastic collisions of particles
+   */
+  template <saga::backend Backend> struct elastic;
+
+  template <> struct elastic<saga::backend::CPU> {
+
+    /// Evaluate the collisions among particles inplace
+    template <class Particles, class FloatType>
+    void operator()(Particles &particles, FloatType delta_t) const {
+
+      auto size = particles.size();
+
+      saga::core::vector<bool, saga::backend::CPU> invalid(size);
+      saga::physics::set_vector_values<saga::backend::CPU>::evaluate(invalid,
+                                                                     false);
+
+      for (auto i = 0u; i < size; ++i) {
+
+        auto pi = particles[i];
+
+        for (auto j = i + 1; j < size; ++j) {
+
+          if (invalid[j])
+            continue;
+
+          auto pj = particles[j];
+
+          auto [time_to_collision, is_valid] =
+              detail::collision_time_evaluator{}(pi, pj, delta_t);
+
+          if (is_valid) {
+
+            detail::elastic_fctr{}(pi, pj, time_to_collision, delta_t);
+
+            // no need to set/check invalid[i] since we will never end-up
+            // processing that particle again
+            invalid[j] = true;
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  template <> struct elastic<saga::backend::CUDA> {
+
+    /// Evaluate the collisions among particles inplace
+    template <class Particles, class FloatType>
+    void operator()(Particles &particles, FloatType delta_t) const {
+
+#if SAGA_CUDA_ENABLED
+
+      auto [blocks, threads_per_block] =
+          saga::core::cuda::optimal_grid_1d(particles);
+
+      auto particles_view = saga::core::make_container_view(particles);
+
+      auto smem = threads_per_block *
+                  sizeof(typename decltype(particles_view)::value_type);
+
+      saga::core::cuda::apply_functor_skip_if_previous_evaluation_is_true<<<
+          blocks, threads_per_block, smem>>>(particles_view,
+                                             detail::collision_time_evaluator{},
+                                             detail::elastic_fctr{}, delta_t);
+
+      SAGA_CHECK_LAS_ERROR("Failed to calculate collisions");
+#else
+      SAGA_THROW_CUDA_ERROR;
+#endif
+    }
+  };
+
+  /*!\brief Collision type where two balls merge into one when are too close
+   */
+  template <saga::backend Backend> struct simple_merge;
+
+  template <> struct simple_merge<saga::backend::CPU> {
+
+    /// Evaluate the collisions among particles inplace
+    template <class Particles, class FloatType>
+    void operator()(Particles &particles, FloatType delta_t) const {
+
+      auto size = particles.size();
+
+      saga::core::vector<bool, saga::backend::CPU> invalid(size);
+      saga::physics::set_vector_values<saga::backend::CPU>::evaluate(invalid,
+                                                                     false);
+
+      for (auto i = 0u; i < size; ++i) {
+
+        if (invalid[i])
+          continue;
+
+        auto pi = particles[i];
+
+        for (auto j = i + 1; j < size; ++j) {
+
+          if (invalid[j])
+            continue;
+
+          auto pj = particles[j];
+
+          // if delta_t is too big, we might miss situations where several
+          // particles collide at the same time
+          auto [time_to_collision, is_valid] =
+              detail::collision_time_evaluator{}(pi, pj, delta_t);
+
+          if (is_valid) {
+            detail::simple_merge_fctr{}(pi, pj, time_to_collision, delta_t);
+            invalid[j] = true;
+            break;
+          }
+        }
+      }
+
+      // allocate the new container of particles
+      std::size_t n = 0;
+      for (auto i = 0u; i < invalid.size(); ++i)
+        if (!invalid[i])
+          ++n;
+
+      std::remove_reference_t<std::remove_cv_t<decltype(particles)>>
+          new_particles(n);
+
+      // copy the information to the new container
+      std::size_t read_counter = 0u, write_counter = 0u;
+
+      while (read_counter < size) {
+
+        if (invalid[read_counter]) {
+          ++read_counter;
+          continue;
+        }
+
+        new_particles[write_counter++] = particles[read_counter++];
+      }
+
+      // set the input particles to the new particles (avoid a copy)
+      particles = std::move(new_particles);
+    }
+  };
+
+  template <> struct simple_merge<saga::backend::CUDA> {
+
+    template <class Particles, class FloatType>
+    void operator()(Particles &particles, FloatType delta_t) {
+
+#if SAGA_CUDA_ENABLED
+
+      auto [blocks, threads_per_block] =
+          saga::core::cuda::optimal_grid_1d(particles);
+
+      auto particles_view = saga::core::make_container_view(particles);
+
+      auto smem = threads_per_block *
+                  sizeof(typename decltype(particles_view)::value_type);
+
+      saga::core::cuda::apply_functor_skip_if_previous_evaluation_is_true<<<
+          blocks, threads_per_block, smem>>>(
+          particles_view, detail::collision_time_evaluator{},
+          detail::simple_merge_fctr{}, delta_t);
+
+      // TODO: determine the new number of particles and allocate new vector
+
+      SAGA_CHECK_LAS_ERROR("Failed to calculate collisions");
+#else
+      SAGA_THROW_CUDA_ERROR;
+#endif
     }
   };
 } // namespace saga::physics::collision
