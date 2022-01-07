@@ -2,8 +2,8 @@
 #include "saga/core/backend.hpp"
 #include "saga/core/views.hpp"
 #if SAGA_CUDA_ENABLED
-#include "saga/core/cuda/core.hpp"
-#include "saga/core/cuda/loops.hpp"
+#include "saga/cuda/core.hpp"
+#include "saga/cuda/loops.hpp"
 #endif
 
 namespace saga::physics {
@@ -51,10 +51,10 @@ namespace saga::physics {
   template <class View, class Functor, class... Args>
   void apply_functor(View obj, Functor const &functor, Args &&...args) {
 
-    auto [blocks, threads_per_block] = saga::core::cuda::optimal_grid_1d(obj);
+    auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(obj);
 
-    saga::core::cuda::apply_functor<<<blocks, threads_per_block>>>(obj, functor,
-                                                                   args...);
+    saga::cuda::apply_functor<<<blocks, threads_per_block>>>(obj, functor,
+                                                             args...);
 
     SAGA_CHECK_LAS_ERROR("Failed to evaluate functor");
   }
@@ -75,9 +75,9 @@ namespace saga::physics {
     static void evaluate(Vector &v, typename Vector::value_type def) {
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] = saga::core::cuda::optimal_grid_1d(v);
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(v);
 
-      saga::core::cuda::set_view_values<<<blocks, threads_per_block>>>(
+      saga::cuda::set_view_values<<<blocks, threads_per_block>>>(
           saga::core::make_vector_view(v), def);
 
       SAGA_CHECK_LAS_ERROR("Failed to set vector values");
@@ -161,12 +161,11 @@ namespace saga::physics {
 
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] =
-          saga::core::cuda::optimal_grid_1d(forces);
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(forces);
 
       auto forces_view = saga::core::make_container_view(forces);
 
-      saga::core::cuda::set_view_values<<<blocks, threads_per_block>>>(
+      saga::cuda::set_view_values<<<blocks, threads_per_block>>>(
           forces_view,
           typename decltype(forces_view)::value_type{0.f, 0.f, 0.f});
 
@@ -184,8 +183,7 @@ namespace saga::physics {
 
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] =
-          saga::core::cuda::optimal_grid_1d(particles);
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(particles);
 
       auto particles_view = saga::core::make_container_view(particles);
       auto forces_view = saga::core::make_container_view(forces);
@@ -193,7 +191,7 @@ namespace saga::physics {
       auto smem = threads_per_block *
                   sizeof(typename decltype(particles_view)::value_type);
 
-      saga::core::cuda::calculate_forces<<<blocks, threads_per_block, smem>>>(
+      saga::cuda::calculate_forces<<<blocks, threads_per_block, smem>>>(
           forces_view, force_function, particles_view);
 
       SAGA_CHECK_LAS_ERROR("Failed to determine accelerations");
@@ -228,14 +226,12 @@ namespace saga::physics {
 
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] =
-          saga::core::cuda::optimal_grid_1d(particles);
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(particles);
 
-      saga::core::cuda::
-          apply_functor_contiguous_views<<<blocks, threads_per_block>>>(
-              saga::core::make_container_view(particles),
-              saga::core::make_container_view(forces),
-              detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
+      saga::cuda::apply_functor_contiguous_views<<<blocks, threads_per_block>>>(
+          saga::core::make_container_view(particles),
+          saga::core::make_container_view(forces),
+          detail::integrate_momenta_and_position_kernel_fctr{}, delta_t);
 
       SAGA_CHECK_LAS_ERROR("Unable to integrate momenta and position");
 #else

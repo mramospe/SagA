@@ -2,7 +2,7 @@
 #include "saga/core/backend.hpp"
 #include "saga/core/views.hpp"
 #if SAGA_CUDA_ENABLED
-#include "saga/core/cuda/loops.hpp"
+#include "saga/cuda/loops.hpp"
 #endif
 #include <stdexcept>
 #include <string>

@@ -131,12 +131,12 @@ namespace saga {
 
     /// Check if the input type is a valid type descriptor
     template <>
-    struct is_valid_type_descriptor<cuda::single_float_precision>
+    struct is_valid_type_descriptor<saga::cuda::single_float_precision>
         : std::true_type {};
 
     /// Check if the input type is a valid type descriptor
     template <>
-    struct is_valid_type_descriptor<cuda::double_float_precision>
+    struct is_valid_type_descriptor<saga::cuda::double_float_precision>
         : std::true_type {};
 
     /// Check if the input type is a valid type descriptor

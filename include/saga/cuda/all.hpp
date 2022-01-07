@@ -1,6 +1,6 @@
 #pragma once
-#include "saga/core/cuda/core.hpp"
-#include "saga/core/cuda/loops.hpp"
+#include "saga/cuda/core.hpp"
+#include "saga/cuda/loops.hpp"
 
 /// Objects explicitely defined to run on CUDA kernels
 namespace saga::cuda {

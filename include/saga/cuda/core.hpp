@@ -3,7 +3,7 @@
 
 #define SAGA_CUDA_MAX_THREADS_PER_BLOCK_X 1024
 
-namespace saga::core::cuda {
+namespace saga::cuda {
 
   /// Simple object to hold the number of blocks and threads
   struct grid_1d {
@@ -22,4 +22,4 @@ namespace saga::core::cuda {
       return {blocks, SAGA_CUDA_MAX_THREADS_PER_BLOCK_X};
     }
   }
-} // namespace saga::core::cuda
+} // namespace saga::cuda

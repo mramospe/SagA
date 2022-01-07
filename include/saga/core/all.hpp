@@ -1,7 +1,7 @@
 #pragma once
 #include "saga/core/backend.hpp"
 #if SAGA_CUDA_ENABLED
-#include "saga/core/cuda/all.hpp"
+#include "saga/cuda/all.hpp"
 #endif
 #include "saga/core/container.hpp"
 #include "saga/core/iterator.hpp"

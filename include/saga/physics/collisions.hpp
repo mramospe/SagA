@@ -80,12 +80,13 @@ namespace saga::physics::collision {
       }
     };
 
-    struct elastic_fctr {
-      /*!\brief Evaluate the collisions between two particles
+    /*!\brief Evaluate the elastic collision between two particles
 
-        Note that *time_to_collision* must be negative and smaller than
-        *delta_t* in absolute value.
+     \warning The value of *time_to_collision* must be negative and smaller than
+      *delta_t* in absolute value. No check is done to verify that this is true.
       */
+    struct elastic_fctr {
+
       template <class U, class V, class FloatType>
       __saga_core_function__ std::enable_if_t<
           std::is_same_v<typename U::shape_type,
@@ -146,6 +147,12 @@ namespace saga::physics::collision {
       }
     };
 
+    /*!\brief Evaluate the collision between two particles, merging them if they
+     are close
+
+     \warning The value of *time_to_collision* must be negative and smaller than
+      *delta_t* in absolute value. No check is done to verify that this is true.
+      */
     struct simple_merge_fctr {
 
       /// Merge two particles if they are close enough
@@ -254,15 +261,14 @@ namespace saga::physics::collision {
 
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] =
-          saga::core::cuda::optimal_grid_1d(particles);
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(particles);
 
       auto particles_view = saga::core::make_container_view(particles);
 
       auto smem = threads_per_block *
                   sizeof(typename decltype(particles_view)::value_type);
 
-      saga::core::cuda::apply_functor_skip_if_previous_evaluation_is_true<<<
+      saga::cuda::apply_functor_skip_if_previous_evaluation_is_true<<<
           blocks, threads_per_block, smem>>>(particles_view,
                                              detail::collision_time_evaluator{},
                                              detail::elastic_fctr{}, delta_t);
@@ -351,18 +357,21 @@ namespace saga::physics::collision {
 
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] =
-          saga::core::cuda::optimal_grid_1d(particles);
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(particles);
 
       auto particles_view = saga::core::make_container_view(particles);
 
       auto smem = threads_per_block *
                   sizeof(typename decltype(particles_view)::value_type);
 
-      saga::core::cuda::apply_functor_skip_if_previous_evaluation_is_true<<<
-          blocks, threads_per_block, smem>>>(
-          particles_view, detail::collision_time_evaluator{},
-          detail::simple_merge_fctr{}, delta_t);
+      saga::core::vector<bool, saga::backend::CUDA> counter(particles.size());
+
+      saga::cuda::
+          apply_functor_skip_if_previous_evaluation_is_true_with_counter<<<
+              blocks, threads_per_block, smem>>>(
+              particles_view, detail::collision_time_evaluator{},
+              detail::simple_merge_fctr{},
+              saga::core::make_vector_view(counter), delta_t);
 
       // TODO: determine the new number of particles and allocate new vector
 
