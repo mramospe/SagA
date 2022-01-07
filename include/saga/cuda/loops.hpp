@@ -1,12 +1,100 @@
 #pragma once
 #include "saga/cuda/core.hpp"
-
-#include <stdexcept>
-#include <string>
+#include <limits>
+#include <tuple>
 
 namespace saga::cuda {
 
-  /// Apply a functor on the given views
+  /// Set forces to zero
+  template <class View, class ValueType>
+  __global__ void set_view_values(View obj, ValueType def) {
+
+    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (gtid < obj.size())
+      obj[gtid] = def;
+  }
+
+  namespace detail {
+    // workaround to allow calling "std::numeric_limits::max" as a constant
+    // expression inside a kernel
+    template <class TypeDescriptor> struct numeric_info {
+      static constexpr auto float_max =
+          std::numeric_limits<typename TypeDescriptor::float_type>::max();
+    };
+  } // namespace detail
+
+  /*!\brief Find the combination for which *predicate* is the smallest
+
+    The predicate is assumed to return both the value and the result of a check
+    for its validation. If no suitable combination is found then the returned
+    index is -1.
+   */
+  template <class IndicesView, class View, class Functor, class... Args>
+  __global__ void find_lesser_with_validation(IndicesView out, View obj,
+                                              Functor predicate, Args... args) {
+
+    extern __shared__ char shared_memory[];
+
+    // CUDA does not allow to create arrays of template types yet
+    auto shared_objects = (typename View::value_type *)shared_memory;
+
+    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    auto current = gtid < obj.size() ? obj[gtid] : obj[0];
+
+    // the number of tiles is equal to the dimension of the block
+    auto ntiles = obj.size() / blockDim.x + (obj.size() % blockDim.x != 0);
+
+    auto result =
+        detail::numeric_info<typename View::type_descriptor>::float_max;
+
+    typename IndicesView::value_type index = gtid;
+    bool is_valid = false;
+
+    // loop over the tiles
+    for (auto tile = 0u; tile < ntiles; ++tile) {
+
+      auto idx = tile * blockDim.x + threadIdx.x;
+
+      if (idx < obj.size())
+        shared_objects[threadIdx.x] = obj[idx];
+
+      // the shared memory has been filled
+      __syncthreads();
+
+      if (gtid < obj.size()) {
+        for (auto i = 0u; i < blockDim.x; ++i) {
+
+          auto cid = tile * blockDim.x + i;
+
+          if (cid == gtid)
+            continue;
+          else if (cid < obj.size()) {
+
+            auto [new_result, new_valid] =
+                predicate(current, shared_objects[i], args...);
+
+            if (new_valid && new_result < result) {
+              result = new_result;
+              is_valid = new_valid;
+              index = cid;
+            }
+
+          } else
+            break;
+        }
+      }
+
+      // the interactions have been computed
+      __syncthreads();
+    }
+
+    if (gtid < obj.size())
+      out[gtid] = is_valid ? index : SAGA_CUDA_INVALID_INDEX;
+  }
+
+  /// Apply a functor on the given view
   template <class View, class Functor, class... Args>
   __global__ void apply_functor(View obj, Functor functor, Args... args) {
     auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -22,246 +110,5 @@ namespace saga::cuda {
     auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gtid < first.size())
       functor(first[gtid], second[gtid], args...);
-  }
-
-  /// Apply a functor on the given views
-  template <class ParticlesView, class IsCloseFunctor, class Functor,
-            class... Args>
-  __global__ void apply_functor_skip_if_previous_evaluation_is_true(
-      ParticlesView particles, IsCloseFunctor is_close_functor, Functor functor,
-      Args... args) {
-
-    extern __shared__ char shared_memory[];
-
-    // CUDA does not allow to create arrays of template types yet
-    auto shared_particles = (typename ParticlesView::value_type *)shared_memory;
-
-    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    auto current_particle = gtid < particles.size()
-                                ? particles[gtid]
-                                : particles[0]; // default to the first particle
-
-    // the number of tiles is equal to the dimension of the block
-    auto ntiles =
-        particles.size() / blockDim.x + (particles.size() % blockDim.x != 0);
-
-    // while this is true we keep evaluating the functor
-    bool code = true;
-
-    // loop over the tiles
-    for (auto tile = 0u; tile < ntiles; ++tile) {
-
-      auto idx = tile * blockDim.x + threadIdx.x;
-
-      if (idx < particles.size())
-        shared_particles[threadIdx.x] = particles[idx];
-
-      // the shared memory has been filled
-      __syncthreads();
-
-      if (code && gtid < particles.size()) {
-        for (auto i = 0u; i < blockDim.x; ++i) {
-
-          auto cid = tile * blockDim.x + i;
-
-          if (cid == gtid)
-            continue; // the particle is the one that is being processed
-          else if (cid < particles.size()) {
-
-            auto [time_to_collision, is_valid] = is_close_functor(
-                current_particle, shared_particles[threadIdx.x], args...);
-
-            if (is_valid) {
-              // we will never process this particle again, since at least one
-              // particle has been found being close
-              code = false;
-
-              if (cid > gtid)
-                // call the functor only if we are processing particles with an
-                // index greater than the current
-                functor(current_particle, particles[cid], time_to_collision,
-                        args...);
-            }
-          } else
-            // the next particles will also fall into this statement, so simply
-            // stop looping over the array
-            break;
-        }
-      }
-
-      // the interactions have been computed
-      __syncthreads();
-    }
-  }
-
-  /// Apply a functor on the given views
-  template <class ParticlesView, class IsCloseFunctor, class Functor,
-            class TrackVector, class... Args>
-  __global__ void
-  apply_functor_skip_if_previous_evaluation_is_true_with_counter(
-      ParticlesView particles, IsCloseFunctor is_close_functor, Functor functor,
-      TrackVector track_vector, Args... args) {
-
-    extern __shared__ char shared_memory[];
-
-    // CUDA does not allow to create arrays of template types yet
-    auto shared_particles = (typename ParticlesView::value_type *)shared_memory;
-
-    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    auto current_particle = gtid < particles.size()
-                                ? particles[gtid]
-                                : particles[0]; // default to the first particle
-
-    // the number of tiles is equal to the dimension of the block
-    auto ntiles =
-        particles.size() / blockDim.x + (particles.size() % blockDim.x != 0);
-
-    // while this is true we keep evaluating the functor
-    bool code = true;
-
-    track_vector[gtid] = true;
-
-    // loop over the tiles
-    for (auto tile = 0u; tile < ntiles; ++tile) {
-
-      auto idx = tile * blockDim.x + threadIdx.x;
-
-      if (idx < particles.size())
-        shared_particles[threadIdx.x] = particles[idx];
-
-      // the shared memory has been filled
-      __syncthreads();
-
-      if (code && gtid < particles.size()) {
-        for (auto i = 0u; i < blockDim.x; ++i) {
-
-          auto cid = tile * blockDim.x + i;
-
-          if (cid == gtid)
-            continue; // the particle is the one that is being processed
-          else if (cid < particles.size()) {
-
-            auto [time_to_collision, is_valid] = is_close_functor(
-                current_particle, shared_particles[threadIdx.x], args...);
-
-            if (is_valid) {
-              // we will never process this particle again, since at least one
-              // particle has been found being close
-              code = false;
-
-              if (cid > gtid) {
-                // store the information in the tracking vector
-                track_vector[cid] = false;
-                // call the functor only if we are processing particles with an
-                // index greater than the current
-                functor(current_particle, particles[cid], time_to_collision,
-                        args...);
-              }
-            }
-          } else
-            // the next particles will also fall into this statement, so simply
-            // stop looping over the array
-            break;
-        }
-      }
-
-      // the interactions have been computed
-      __syncthreads();
-    }
-  }
-
-  /// Set the values of a vector
-  struct set_vector_value {
-    template <class T>
-    __saga_core_function__ void operator()(T &v, T def) const {
-      v = def;
-    }
-  };
-
-  /// Set forces to zero
-  template <class View, class ValueType>
-  __global__ void set_view_values(View obj, ValueType def) {
-
-    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (gtid < obj.size())
-      obj[gtid] = def;
-  }
-
-  /* !\brief Kernel functor to evaluate a functor that calculates the force
-
-     Here, each block calculates the interaction on a tile of d * d where d is
-     the dimension of the block. In each step, each thread updates the
-     corresponding slot in the shared memory with the information from one of
-     the particles and, after synchronizing the threads, iterates over the
-     shared memory to calculate the interaction with each particle. Once this is
-     done, the threads are synchronized and the process is repeated as many
-     times as tiles are created.
-   */
-  template <class ForcesView, class Functor, class ConstParticlesView>
-  __global__ void calculate_forces(ForcesView forces, Functor force_functor,
-                                   ConstParticlesView particles) {
-
-    extern __shared__ char shared_memory[];
-
-    // CUDA does not allow to create arrays of template types yet
-    auto shared_particles =
-        (typename ConstParticlesView::value_type *)shared_memory;
-
-    auto gtid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    auto current_particle = gtid < particles.size()
-                                ? particles[gtid]
-                                : particles[0]; // default to the first particle
-
-    // initial value
-    typename ForcesView::value_type acc = {0.f, 0.f, 0.f};
-
-    // the number of tiles is equal to the dimension of the block
-    auto ntiles =
-        particles.size() / blockDim.x + (particles.size() % blockDim.x != 0);
-
-    // loop over the tiles
-    for (auto tile = 0u; tile < ntiles; ++tile) {
-
-      auto idx = tile * blockDim.x + threadIdx.x;
-
-      if (idx < particles.size())
-        shared_particles[threadIdx.x] = particles[idx];
-
-      // the shared memory has been filled
-      __syncthreads();
-
-      if (gtid < particles.size()) {
-        for (auto i = 0u; i < blockDim.x; ++i) {
-          if (tile * blockDim.x + i == gtid)
-            continue; // the particle is the one that is being processed
-          else if (tile * blockDim.x + i < particles.size()) {
-            // the particle is valid, its force is added
-            auto r =
-                force_functor(current_particle, shared_particles[threadIdx.x]);
-            acc.set_x(acc.get_x() + r.get_x());
-            acc.set_y(acc.get_y() + r.get_y());
-            acc.set_z(acc.get_z() + r.get_z());
-          } else
-            // the next particles will also fall into this statement, so simply
-            // stop looping over the array
-            break;
-        }
-      }
-
-      // the interactions have been computed
-      __syncthreads();
-    }
-
-    if (gtid < particles.size()) {
-      // fill the resulting force from the sum
-      auto force_proxy = forces[gtid];
-      force_proxy.set_x(force_proxy.get_x() + acc.get_x());
-      force_proxy.set_y(force_proxy.get_y() + acc.get_y());
-      force_proxy.set_z(force_proxy.get_z() + acc.get_z());
-    }
   }
 } // namespace saga::cuda

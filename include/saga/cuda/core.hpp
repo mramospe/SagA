@@ -2,6 +2,7 @@
 #include <tuple>
 
 #define SAGA_CUDA_MAX_THREADS_PER_BLOCK_X 1024
+#define SAGA_CUDA_INVALID_INDEX -1
 
 namespace saga::cuda {
 

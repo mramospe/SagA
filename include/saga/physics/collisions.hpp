@@ -3,6 +3,10 @@
 #include "saga/core/vector.hpp"
 #include "saga/physics/loops.hpp"
 #include "saga/physics/shape.hpp"
+#if SAGA_CUDA_ENABLED
+#include "saga/cuda/loops.hpp"
+#include "saga/cuda/physics.hpp"
+#endif
 #include <algorithm>
 #include <stdexcept>
 #include <type_traits>
@@ -92,8 +96,10 @@ namespace saga::physics::collision {
           std::is_same_v<typename U::shape_type,
                          saga::physics::sphere<typename U::type_descriptor>>,
           void>
-      operator()(U src, V tgt, FloatType time_to_collision,
-                 FloatType delta_t) const {
+      operator()(U src, V tgt, FloatType delta_t) const {
+
+        auto time_to_collision =
+            collision_time_evaluator{}(src, tgt, delta_t).delta_t;
 
         // positions of the collision
         src.set_x(src.get_x() + src.get_px() * time_to_collision);
@@ -161,8 +167,10 @@ namespace saga::physics::collision {
           std::is_same_v<typename U::shape_type,
                          saga::physics::sphere<typename U::type_descriptor>>,
           void>
-      operator()(U src, V tgt, FloatType time_to_collision,
-                 FloatType delta_t) const {
+      operator()(U src, V tgt, FloatType delta_t) const {
+
+        auto time_to_collision =
+            collision_time_evaluator{}(src, tgt, delta_t).delta_t;
 
         // only real numbers represent collisions
         auto radius_from_mass = [](auto const &p1_radius, auto const &p1_mass,
@@ -227,7 +235,15 @@ namespace saga::physics::collision {
 
       for (auto i = 0u; i < size; ++i) {
 
+        if (invalid[i])
+          continue;
+
         auto pi = particles[i];
+
+        FloatType result =
+            saga::numeric_info<typename Particles::type_descriptor>::max;
+        bool has_collision = false;
+        typename Particles::size_type closest_index = 0;
 
         for (auto j = i + 1; j < size; ++j) {
 
@@ -239,15 +255,23 @@ namespace saga::physics::collision {
           auto [time_to_collision, is_valid] =
               detail::collision_time_evaluator{}(pi, pj, delta_t);
 
-          if (is_valid) {
-
-            detail::elastic_fctr{}(pi, pj, time_to_collision, delta_t);
-
-            // no need to set/check invalid[i] since we will never end-up
-            // processing that particle again
-            invalid[j] = true;
-            break;
+          if (is_valid && time_to_collision < result) {
+            result = time_to_collision;
+            has_collision = is_valid;
+            closest_index = j;
           }
+        }
+
+        if (has_collision) {
+
+          auto pc = particles[closest_index];
+
+          detail::elastic_fctr{}(pi, pc, delta_t);
+
+          // no need to set/check invalid[i] since we will never end-up
+          // processing that particle again
+          invalid[closest_index] = true;
+          break;
         }
       }
     }
@@ -261,19 +285,44 @@ namespace saga::physics::collision {
 
 #if SAGA_CUDA_ENABLED
 
-      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(particles);
-
       auto particles_view = saga::core::make_container_view(particles);
 
+      // determine the indices
+      saga::core::vector<long int, saga::backend::CUDA> indices(
+          particles.size());
+
+      auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(indices);
+
+      auto indices_view = saga::core::make_vector_view(indices);
+
       auto smem = threads_per_block *
-                  sizeof(typename decltype(particles_view)::value_type);
+                  sizeof(typename decltype(indices_view)::value_type);
 
-      saga::cuda::apply_functor_skip_if_previous_evaluation_is_true<<<
-          blocks, threads_per_block, smem>>>(particles_view,
-                                             detail::collision_time_evaluator{},
-                                             detail::elastic_fctr{}, delta_t);
+      saga::cuda::
+          find_lesser_with_validation<<<blocks, threads_per_block, smem>>>(
+              indices_view, particles_view, detail::collision_time_evaluator{},
+              delta_t);
 
-      SAGA_CHECK_LAS_ERROR("Failed to calculate collisions");
+      SAGA_CHECK_LAS_ERROR("Failed to determine the collision indices");
+
+      // sanitize the indices
+      saga::core::vector<long int, saga::backend::CUDA> sanitized_indices(
+          particles.size());
+
+      auto sanitized_indices_view =
+          saga::core::make_vector_view(sanitized_indices);
+
+      saga::cuda::sanitize_collision_index<<<blocks, threads_per_block, smem>>>(
+          sanitized_indices_view, indices_view);
+
+      SAGA_CHECK_LAS_ERROR("Failed to sanitize the collision indices");
+
+      // evaluate the collisions with the sanitized indices
+      saga::cuda::evaluate_collisions<<<blocks, threads_per_block>>>(
+          particles_view, sanitized_indices_view, detail::elastic_fctr{},
+          delta_t);
+
+      SAGA_CHECK_LAS_ERROR("Failed to evaluate collisions");
 #else
       SAGA_THROW_CUDA_ERROR;
 #endif
@@ -316,7 +365,7 @@ namespace saga::physics::collision {
               detail::collision_time_evaluator{}(pi, pj, delta_t);
 
           if (is_valid) {
-            detail::simple_merge_fctr{}(pi, pj, time_to_collision, delta_t);
+            detail::simple_merge_fctr{}(pi, pj, delta_t);
             invalid[j] = true;
             break;
           }
@@ -356,23 +405,14 @@ namespace saga::physics::collision {
     void operator()(Particles &particles, FloatType delta_t) {
 
 #if SAGA_CUDA_ENABLED
-
+      /*
       auto [blocks, threads_per_block] = saga::cuda::optimal_grid_1d(particles);
 
       auto particles_view = saga::core::make_container_view(particles);
 
       auto smem = threads_per_block *
                   sizeof(typename decltype(particles_view)::value_type);
-
-      saga::core::vector<bool, saga::backend::CUDA> counter(particles.size());
-
-      saga::cuda::
-          apply_functor_skip_if_previous_evaluation_is_true_with_counter<<<
-              blocks, threads_per_block, smem>>>(
-              particles_view, detail::collision_time_evaluator{},
-              detail::simple_merge_fctr{},
-              saga::core::make_vector_view(counter), delta_t);
-
+      */
       // TODO: determine the new number of particles and allocate new vector
 
       SAGA_CHECK_LAS_ERROR("Failed to calculate collisions");

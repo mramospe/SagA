@@ -4,6 +4,7 @@
 #if SAGA_CUDA_ENABLED
 #include "saga/cuda/core.hpp"
 #include "saga/cuda/loops.hpp"
+#include "saga/cuda/physics.hpp"
 #endif
 
 namespace saga::physics {
