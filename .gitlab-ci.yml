@@ -1,11 +1,13 @@
-image: gitlab-registry.cern.ch/lhcb-docker/analysis-ci/cc7:latest
+default:
+   image: gitlab-registry.cern.ch/lhcb-docker/analysis-ci/cc7:latest
+   tags:
+      - cvmfs
+   before_script:
+      - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_100 x86_64-centos7-gcc10-opt
 
 stages:
    - build
    - test
-
-before_script:
-   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_100 x86_64-centos7-gcc10-opt
 
 build:
    stage: build
